@@ -1,0 +1,51 @@
+# Maven
+backend/HELP.md
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+!backend/**/src/main/**/target/
+!backend/**/src/test/**/target/
+
+# STS
+backend/.apt_generated
+backend/.classpath
+backend/.factorypath
+backend/.project
+backend/.settings
+backend/.springBeans
+backend/.sts4-cache
+
+# IntelliJ IDEA
+.idea/
+backend/.idea/
+*.iws
+*.iml
+*.ipr
+
+# NetBeans
+backend/nbproject/private/
+backend/nbbuild/
+backend/dist/
+backend/nbdist/
+backend/.nb-gradle/
+backend/build/
+!backend/**/src/main/**/build/
+!backend/**/src/test/**/build/
+
+# VS Code
+.vscode/
+backend/.vscode/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Local Configuration
+backend/src/main/resources/application-local.properties
+
+# JWT Keys
+backend/src/main/resources/keys/local-only/private_key.pem
+backend/src/main/resources/keys/local-only/public_key.pem
