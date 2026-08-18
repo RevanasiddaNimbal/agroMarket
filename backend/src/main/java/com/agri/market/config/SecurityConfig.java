@@ -19,10 +19,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
+            // Authentication
             "/api/v1/auth/register",
             "/api/v1/auth/login",
             "/api/v1/auth/refresh-token",
-            "/api/v1/auth/logout",
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
             "/api/v1/auth/verify-email",
@@ -34,22 +34,41 @@ public class SecurityConfig {
             "/swagger-ui.html"
     };
 
+    private static final String[] ADMIN_ENDPOINTS = {
+            "/api/v1/admin/**"
+    };
+
+    private static final String[] USER_ENDPOINTS = {
+            "/api/v1/user/**"
+    };
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            final HttpSecurity http) throws Exception {
+            final HttpSecurity http ) throws Exception {
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        .sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers(PUBLIC_ENDPOINTS)
+                        .permitAll()
+
+                        .requestMatchers(ADMIN_ENDPOINTS)
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(USER_ENDPOINTS)
+                        .hasAnyRole("USER", "ADMIN")
+
+                        .anyRequest()
+                        .authenticated()
                 )
 
                 .addFilterBefore(

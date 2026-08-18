@@ -49,6 +49,8 @@ class AuthenticationServiceImplTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private RefreshTokenSessionService refreshTokenSessionService;
+    @Mock
+    private EmailVerificationService emailVerificationService;
 
     @InjectMocks
     private AuthenticationServiceImpl authenticationService;
@@ -70,35 +72,75 @@ class AuthenticationServiceImplTest {
     class RegisterTests {
 
         @Test
-        void shouldRegisterUserAndCreateAuthenticationSession() {
-            RegistrationRequest request = RegistrationRequestTestFactory.validRequest();
-            when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.of(userRole));
-            when(userRepository.existsByEmailIgnoreCase("revanasidda@gmail.com")).thenReturn(false);
-            when(userRepository.existsByPhoneNumberIgnoreCase("+919876543210")).thenReturn(false);
-            when(passwordEncoder.encode("P@ssword123")).thenReturn("encoded-password");
-            when(jwtService.generateAccessToken("revanasidda@gmail.com")).thenReturn("access-token");
-            when(jwtService.generateRefreshToken("revanasidda@gmail.com")).thenReturn("refresh-token");
-            when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-                User user = invocation.getArgument(0);
-                user.setId("user-id");
-                return user;
-            });
+        void shouldRegisterUserAndSendVerificationEmail() {
 
-            RegistrationResponse response = authenticationService.register(request, clientInfo);
+            RegistrationRequest request =
+                    RegistrationRequestTestFactory.validRequest();
 
-            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+            when(roleRepository.findByName("USER"))
+                    .thenReturn(Optional.of(userRole));
+
+            when(userRepository.existsByEmailIgnoreCase(
+                    "revanasidda@gmail.com"
+            )).thenReturn(false);
+
+            when(userRepository.existsByPhoneNumberIgnoreCase(
+                    "+919876543210"
+            )).thenReturn(false);
+
+            when(passwordEncoder.encode("P@ssword123"))
+                    .thenReturn("encoded-password");
+
+            when(userRepository.save(any(User.class)))
+                    .thenAnswer(invocation -> {
+                        User user = invocation.getArgument(0);
+                        user.setId("user-id");
+                        return user;
+                    });
+
+            RegistrationResponse response =
+                    authenticationService.register(
+                            request,
+                            clientInfo
+                    );
+
+            ArgumentCaptor<User> userCaptor =
+                    ArgumentCaptor.forClass(User.class);
+
             verify(userRepository).save(userCaptor.capture());
+
             User saved = userCaptor.getValue();
-            assertThat(saved.getEmail()).isEqualTo("revanasidda@gmail.com");
-            assertThat(saved.isEnabled()).isTrue();
-            assertThat(saved.getPassword()).isEqualTo("encoded-password");
-            assertThat(saved.getRoles()).containsExactly(userRole);
-            verify(refreshTokenSessionService).createSession("refresh-token", saved, clientInfo);
-            assertThat(response.getMessage()).isEqualTo("Registration successful. " +
-                    "Please verify your email address before logging in.");
 
+            assertThat(saved.getEmail())
+                    .isEqualTo("revanasidda@gmail.com");
+
+            assertThat(saved.getFullName())
+                    .isEqualTo(request.getFullName());
+
+            assertThat(saved.getPhoneNumber())
+                    .isEqualTo("+919876543210");
+
+            assertThat(saved.isEnabled())
+                    .isFalse();
+
+            assertThat(saved.isEmailVerified())
+                    .isFalse();
+
+            assertThat(saved.getPassword())
+                    .isEqualTo("encoded-password");
+
+            assertThat(saved.getRoles())
+                    .containsExactly(userRole);
+
+            verify(emailVerificationService)
+                    .sendVerificationEmail(saved);
+
+            assertThat(response.getMessage())
+                    .isEqualTo(
+                            "Registration successful. " +
+                                    "Please verify your email address before logging in."
+                    );
         }
-
         @Test
         void shouldRejectRegistrationWhenEmailAlreadyExists() {
             RegistrationRequest request = RegistrationRequestTestFactory.validRequest();
@@ -150,7 +192,7 @@ class AuthenticationServiceImplTest {
             RegistrationRequest request = RegistrationRequestTestFactory.validRequest();
             when(userRepository.existsByEmailIgnoreCase("revanasidda@gmail.com")).thenReturn(false);
             when(userRepository.existsByPhoneNumberIgnoreCase("+919876543210")).thenReturn(false);
-            when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.empty());
+            when(roleRepository.findByName("USER")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> authenticationService.register(request, clientInfo))
                     .isInstanceOf(BusinessException.class)
@@ -163,7 +205,7 @@ class AuthenticationServiceImplTest {
         @Test
         void shouldPropagateRepositoryFailureDuringRegistrationAndNotCreateSession() {
             RegistrationRequest request = RegistrationRequestTestFactory.validRequest();
-            when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.of(userRole));
+            when(roleRepository.findByName("USER")).thenReturn(Optional.of(userRole));
             when(userRepository.existsByEmailIgnoreCase("revanasidda@gmail.com")).thenReturn(false);
             when(userRepository.existsByPhoneNumberIgnoreCase("+919876543210")).thenReturn(false);
             when(passwordEncoder.encode("P@ssword123")).thenReturn("encoded-password");

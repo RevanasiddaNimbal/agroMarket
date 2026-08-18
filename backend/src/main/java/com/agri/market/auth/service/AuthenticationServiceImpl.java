@@ -27,7 +27,7 @@ import static com.agri.market.exception.ErrorCode.*;
 public class AuthenticationServiceImpl
         implements AuthenticationService {
 
-    private static final String USER_ROLE = "ROLE_USER";
+    private static final String USER_ROLE = "USER";
     private static final String TOKEN_TYPE = "Bearer";
 
     private final AuthenticationManager authenticationManager;
