@@ -2,6 +2,7 @@ package com.agri.market.auth.controller;
 
 import com.agri.market.auth.dto.*;
 import com.agri.market.auth.service.AuthenticationService;
+import com.agri.market.security.client.ClientInfoResolver;
 import com.agri.market.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -29,9 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class AuthenticationController {
 
-    private static final String FORWARDED_FOR_HEADER = "X-Forwarded-For";
-    private static final String USER_AGENT_HEADER = "User-Agent";
-    private static final String UNKNOWN = "Unknown";
+    private final ClientInfoResolver clientInfoResolver;
 
     private final AuthenticationService authenticationService;
 
@@ -62,7 +61,7 @@ public class AuthenticationController {
         log.info("Registration request received");
 
         final ClientInfo clientInfo =
-                buildClientInfo(httpRequest);
+                clientInfoResolver.resolve(httpRequest);
 
         final RegistrationResponse response =
                 authenticationService.register(
@@ -104,7 +103,7 @@ public class AuthenticationController {
         log.info("Authentication request received");
 
         final ClientInfo clientInfo =
-                buildClientInfo(httpRequest);
+                clientInfoResolver.resolve(httpRequest);
 
         final AuthenticationResponse response =
                 authenticationService.login(
@@ -218,48 +217,5 @@ public class AuthenticationController {
         );
 
         return ResponseEntity.noContent().build();
-    }
-
-    private ClientInfo buildClientInfo(
-            final HttpServletRequest request
-    ) {
-
-        return new ClientInfo(
-                resolveDeviceName(request),
-                resolveIpAddress(request)
-        );
-    }
-
-    private String resolveDeviceName(
-            final HttpServletRequest request
-    ) {
-
-        final String userAgent =
-                request.getHeader(USER_AGENT_HEADER);
-
-        if (userAgent == null || userAgent.isBlank()) {
-            return UNKNOWN;
-        }
-
-        return userAgent;
-    }
-
-    private String resolveIpAddress(
-            final HttpServletRequest request
-    ) {
-
-        final String forwardedFor =
-                request.getHeader(FORWARDED_FOR_HEADER);
-
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-
-        final String remoteAddress =
-                request.getRemoteAddr();
-
-        return remoteAddress != null
-                ? remoteAddress
-                : UNKNOWN;
     }
 }

@@ -4,7 +4,6 @@ import com.agri.market.auth.dto.*;
 import com.agri.market.exception.BusinessException;
 import com.agri.market.role.entity.Role;
 import com.agri.market.role.repository.RoleRepository;
-import com.agri.market.security.jwt.JwtService;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +27,8 @@ public class AuthenticationServiceImpl
         implements AuthenticationService {
 
     private static final String USER_ROLE = "USER";
-    private static final String TOKEN_TYPE = "Bearer";
 
     private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -39,8 +36,8 @@ public class AuthenticationServiceImpl
     private final PasswordEncoder passwordEncoder;
 
     private final RefreshTokenSessionService refreshTokenSessionService;
-
     private final EmailVerificationService emailVerificationService;
+    private final AuthenticationTokenService authenticationTokenService;
 
     @Override
     @Transactional
@@ -131,10 +128,11 @@ public class AuthenticationServiceImpl
                 email
         );
 
-        return createAuthenticationSession(
-                user,
-                clientInfo
-        );
+        return authenticationTokenService
+                .createAuthenticationSession(
+                        user,
+                        clientInfo
+                );
     }
 
     @Override
@@ -143,40 +141,10 @@ public class AuthenticationServiceImpl
             final RefreshTokenRequest request
     ) {
 
-        log.debug("Refresh token attempt");
-
-        final String refreshToken =
-                request.getRefreshToken();
-
-        final var currentSession =
-                refreshTokenSessionService
-                        .findValidSession(refreshToken);
-
-        jwtService.validateRefreshToken(
-                refreshToken
-        );
-
-        final User user =
-                currentSession.getUser();
-
-        final GeneratedTokens tokens =
-                generateTokens(user);
-
-        refreshTokenSessionService.rotateSession(
-                currentSession,
-                tokens.refreshToken()
-        );
-
-        log.info(
-                "Refresh token rotated successfully for user: {} and session: {}",
-                user.getId(),
-                currentSession.getId()
-        );
-
-        return buildAuthenticationResponse(
-                tokens.accessToken(),
-                tokens.refreshToken()
-        );
+        return authenticationTokenService
+                .refreshAuthenticationSession(
+                        request
+                );
     }
 
     @Override
@@ -208,25 +176,10 @@ public class AuthenticationServiceImpl
 
         refreshTokenSessionService
                 .revokeAllSessions(userId);
-    }
 
-    private AuthenticationResponse createAuthenticationSession(
-            final User user,
-            final ClientInfo clientInfo
-    ) {
-
-        final GeneratedTokens tokens =
-                generateTokens(user);
-
-        refreshTokenSessionService.createSession(
-                tokens.refreshToken(),
-                user,
-                clientInfo
-        );
-
-        return buildAuthenticationResponse(
-                tokens.accessToken(),
-                tokens.refreshToken()
+        log.info(
+                "All sessions revoked successfully for user: {}",
+                userId
         );
     }
 
@@ -293,37 +246,6 @@ public class AuthenticationServiceImpl
                 });
     }
 
-    private AuthenticationResponse buildAuthenticationResponse(
-            final String accessToken,
-            final String refreshToken
-    ) {
-
-        return AuthenticationResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType(TOKEN_TYPE)
-                .build();
-    }
-
-    private GeneratedTokens generateTokens(
-            final User user
-    ) {
-
-        final String username =
-                user.getUsername();
-
-        final String accessToken =
-                jwtService.generateAccessToken(username);
-
-        final String refreshToken =
-                jwtService.generateRefreshToken(username);
-
-        return new GeneratedTokens(
-                accessToken,
-                refreshToken
-        );
-    }
-
     private String normalizeEmail(
             final String email
     ) {
@@ -331,11 +253,5 @@ public class AuthenticationServiceImpl
         return email
                 .trim()
                 .toLowerCase(Locale.ROOT);
-    }
-
-    private record GeneratedTokens(
-            String accessToken,
-            String refreshToken
-    ) {
     }
 }

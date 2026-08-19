@@ -1,6 +1,7 @@
-package com.agri.market.config;
+package com.agri.market.security.config;
 
 import com.agri.market.security.jwt.JwtAuthenticationFilter;
+import com.agri.market.security.oauth2.handler.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,6 +29,9 @@ public class SecurityConfig {
             "/api/v1/auth/verify-email",
             "/api/v1/auth/resend-verification-email",
 
+            // OAuth2
+            "/api/v1/auth/oauth2/exchange",
+
             // OpenAPI / Swagger
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -41,12 +45,12 @@ public class SecurityConfig {
     private static final String[] USER_ENDPOINTS = {
             "/api/v1/user/**"
     };
-
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            final HttpSecurity http ) throws Exception {
+            final HttpSecurity http) throws Exception {
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -70,6 +74,10 @@ public class SecurityConfig {
                         .anyRequest()
                         .authenticated()
                 )
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2SuccessHandler)
+                )
+
 
                 .addFilterBefore(
                         jwtAuthenticationFilter,

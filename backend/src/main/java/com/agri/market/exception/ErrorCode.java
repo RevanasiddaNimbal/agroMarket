@@ -155,7 +155,27 @@ public enum ErrorCode {
             "ERR_INTERNAL_SERVER_ERROR",
             "An unexpected error occurred.",
             INTERNAL_SERVER_ERROR
-    );
+    ),
+
+    // OAuth
+    INVALID_OAUTH_LOGIN_CODE("INVALID_OAUTH_LOGIN_CODE",
+            "Invalid OAuth login code",
+            BAD_REQUEST
+    ),
+
+    OAUTH_LOGIN_CODE_ALREADY_USED("OAUTH_LOGIN_CODE_ALREADY_USED",
+            "OAuth login code has already been used",
+            BAD_REQUEST
+    ),
+    OAUTH_LOGIN_CODE_EXPIRED("OAUTH_LOGIN_CODE_EXPIRED",
+            "OAuth login code has expired",
+            BAD_REQUEST
+    ),
+    OAUTH_EMAIL_NOT_AVAILABLE("OAUTH_EMAIL_NOT_AVAILABLE",
+            "OAuth email is not available",
+            BAD_REQUEST
+    )
+    ;
 
     private final String code;
     private final String defaultMessage;

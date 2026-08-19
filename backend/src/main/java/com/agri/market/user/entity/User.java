@@ -1,6 +1,7 @@
 package com.agri.market.user.entity;
 
 import com.agri.market.role.entity.Role;
+import com.agri.market.security.oauth2.entity.OAuthAccount;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -12,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -35,21 +37,21 @@ public class User implements UserDetails {
     @Column(name = "email", nullable = false, unique = true, length = 150)
     private String email;
 
-    @Column(name = "phone_number", nullable = false, unique = true, length = 15)
+    @Column(name = "phone_number", unique = true, length = 15)
     private String phoneNumber;
 
-    @Column(name = "email_verified", nullable = false)
+    @Column(name = "email_verified")
     @Builder.Default
     private boolean emailVerified = false;
 
-    @Column(name = "phone_verified", nullable = false)
+    @Column(name = "phone_verified")
     @Builder.Default
     private boolean phoneVerified = false;
 
-    @Column(name = "password", nullable = false)
+    @Column(name = "password")
     private String password;
 
-    @Column(name = "credentials_expired", nullable = false)
+    @Column(name = "credentials_expired")
     @Builder.Default
     private boolean credentialsExpired = false;
 
@@ -64,7 +66,11 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean accountLocked = false;
 
-    @Column(name = "profile_picture_url")
+    @Column(
+            name = "profile_picture_url",
+            nullable = true,
+            columnDefinition = "TEXT"
+    )
     private String profilePictureUrl;
 
     @CreatedDate
@@ -82,6 +88,14 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private List<Role> roles;
+
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<OAuthAccount> oauthAccounts = new ArrayList<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
