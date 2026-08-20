@@ -13,7 +13,7 @@ class BusinessExceptionTest {
         BusinessException exception = new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.EMAIL_ALREADY_EXISTS);
-        assertThat(exception.getMessage()).isEqualTo("Email  already exists");
+        assertThat(exception.getMessage()).isEqualTo("The provided email address cannot be used.");
         assertThat(exception.getArgs()).isEmpty();
     }
 

@@ -3,6 +3,7 @@ package com.agri.market.auth.service;
 import com.agri.market.auth.dto.AuthenticationResponse;
 import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.auth.dto.RefreshTokenRequest;
+import com.agri.market.auth.entity.RefreshTokenSession;
 import com.agri.market.security.jwt.JwtService;
 import com.agri.market.user.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class AuthenticationTokenServiceImpl
     private static final String TOKEN_TYPE = "Bearer";
 
     private final JwtService jwtService;
-    private final RefreshTokenSessionService refreshTokenSessionService;
+    private final RefreshTokenSessionService refreshTokenSessionServiceImpl;
 
     @Override
     @Transactional
@@ -36,7 +37,7 @@ public class AuthenticationTokenServiceImpl
         final GeneratedTokens tokens =
                 generateTokens(user);
 
-        refreshTokenSessionService.createSession(
+        refreshTokenSessionServiceImpl.createSession(
                 tokens.refreshToken(),
                 user,
                 clientInfo
@@ -59,18 +60,20 @@ public class AuthenticationTokenServiceImpl
             final RefreshTokenRequest request
     ) {
 
-        log.debug("Refresh authentication session attempt");
+        log.debug(
+                "Refresh authentication session attempt"
+        );
 
         final String refreshToken =
                 request.getRefreshToken();
 
-        final var currentSession =
-                refreshTokenSessionService
-                        .findValidSession(refreshToken);
-
         jwtService.validateRefreshToken(
                 refreshToken
         );
+
+        final RefreshTokenSession currentSession =
+                refreshTokenSessionServiceImpl
+                        .findValidSession(refreshToken);
 
         final User user =
                 currentSession.getUser();
@@ -78,13 +81,14 @@ public class AuthenticationTokenServiceImpl
         final GeneratedTokens tokens =
                 generateTokens(user);
 
-        refreshTokenSessionService.rotateSession(
+        refreshTokenSessionServiceImpl.rotateSession(
                 currentSession,
                 tokens.refreshToken()
         );
 
         log.info(
-                "Authentication session refreshed successfully for user: {} and session: {}",
+                "Authentication session refreshed successfully " +
+                        "for user: {} and session: {}",
                 user.getId(),
                 currentSession.getId()
         );

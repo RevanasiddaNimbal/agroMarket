@@ -98,6 +98,11 @@ public enum ErrorCode {
             "The refresh token is invalid or has expired.",
             UNAUTHORIZED
     ),
+    REFRESH_TOKEN_REUSE_DETECTED(
+            "REFRESH_TOKEN_REUSE_DETECTED",
+            "Refresh token reuse detected",
+            UNAUTHORIZED
+    ),
 
     // EMAIL VERIFICATION
 
@@ -141,6 +146,7 @@ public enum ErrorCode {
             BAD_REQUEST
     ),
 
+
     // DATABASE
 
     DATA_INTEGRITY_VIOLATION(
@@ -174,8 +180,7 @@ public enum ErrorCode {
     OAUTH_EMAIL_NOT_AVAILABLE("OAUTH_EMAIL_NOT_AVAILABLE",
             "OAuth email is not available",
             BAD_REQUEST
-    )
-    ;
+    );
 
     private final String code;
     private final String defaultMessage;

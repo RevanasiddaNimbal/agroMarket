@@ -35,7 +35,7 @@ public class AuthenticationServiceImpl
 
     private final PasswordEncoder passwordEncoder;
 
-    private final RefreshTokenSessionService refreshTokenSessionService;
+    private final RefreshTokenSessionService refreshTokenSessionServiceImpl;
     private final EmailVerificationService emailVerificationService;
     private final AuthenticationTokenService authenticationTokenService;
 
@@ -155,7 +155,7 @@ public class AuthenticationServiceImpl
 
         log.debug("Logout attempt");
 
-        refreshTokenSessionService
+        refreshTokenSessionServiceImpl
                 .revokeSession(refreshToken);
 
         log.info(
@@ -174,7 +174,7 @@ public class AuthenticationServiceImpl
                 userId
         );
 
-        refreshTokenSessionService
+        refreshTokenSessionServiceImpl
                 .revokeAllSessions(userId);
 
         log.info(

@@ -7,6 +7,7 @@ import com.agri.market.auth.service.AuthenticationService;
 import com.agri.market.exception.BusinessException;
 import com.agri.market.exception.ErrorCode;
 import com.agri.market.handler.ApplicationExceptionHandler;
+import com.agri.market.security.client.ClientInfoResolver;
 import com.agri.market.support.AuthenticationRequestTestFactory;
 import com.agri.market.support.RefreshTokenRequestTestFactory;
 import com.agri.market.support.RegistrationRequestTestFactory;
@@ -39,6 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthenticationControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    @Mock
+    private ClientInfoResolver clientInfoResolver;
 
     @Mock
     private AuthenticationService authenticationService;

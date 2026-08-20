@@ -28,18 +28,25 @@ class AuthenticationTokenServiceImplTest {
     private static final String REFRESH_TOKEN = "refresh-token";
     private static final String NEW_ACCESS_TOKEN = "new-access-token";
     private static final String NEW_REFRESH_TOKEN = "new-refresh-token";
+
     @Mock
     private JwtService jwtService;
+
     @Mock
-    private RefreshTokenSessionService refreshTokenSessionService;
+    private RefreshTokenSessionService refreshTokenSessionServiceImpl;
+
     @Mock
     private User user;
+
     @Mock
     private ClientInfo clientInfo;
+
     @Mock
     private RefreshTokenRequest refreshTokenRequest;
+
     @Mock
     private RefreshTokenSession currentSession;
+
     @InjectMocks
     private AuthenticationTokenServiceImpl authenticationTokenService;
 
@@ -50,6 +57,7 @@ class AuthenticationTokenServiceImplTest {
         @Test
         @DisplayName("should create authentication session and return tokens")
         void shouldCreateAuthenticationSessionAndReturnTokens() {
+
             when(user.getUsername()).thenReturn(USERNAME);
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(ACCESS_TOKEN);
@@ -68,7 +76,7 @@ class AuthenticationTokenServiceImplTest {
 
             verify(jwtService).generateAccessToken(USERNAME);
             verify(jwtService).generateRefreshToken(USERNAME);
-            verify(refreshTokenSessionService)
+            verify(refreshTokenSessionServiceImpl)
                     .createSession(
                             REFRESH_TOKEN,
                             user,
@@ -77,8 +85,9 @@ class AuthenticationTokenServiceImplTest {
         }
 
         @Test
-        @DisplayName("should generate tokens before creating refresh session")
-        void shouldGenerateTokensBeforeCreatingRefreshSession() {
+        @DisplayName("should generate tokens before creating refresh token session")
+        void shouldGenerateTokensBeforeCreatingRefreshTokenSession() {
+
             when(user.getUsername()).thenReturn(USERNAME);
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(ACCESS_TOKEN);
@@ -91,13 +100,15 @@ class AuthenticationTokenServiceImplTest {
             );
 
             InOrder inOrder =
-                    inOrder(jwtService, refreshTokenSessionService);
+                    inOrder(jwtService, refreshTokenSessionServiceImpl);
 
             inOrder.verify(jwtService)
                     .generateAccessToken(USERNAME);
+
             inOrder.verify(jwtService)
                     .generateRefreshToken(USERNAME);
-            inOrder.verify(refreshTokenSessionService)
+
+            inOrder.verify(refreshTokenSessionServiceImpl)
                     .createSession(
                             REFRESH_TOKEN,
                             user,
@@ -108,6 +119,7 @@ class AuthenticationTokenServiceImplTest {
         @Test
         @DisplayName("should not generate refresh token when access token generation fails")
         void shouldNotGenerateRefreshTokenWhenAccessTokenGenerationFails() {
+
             when(user.getUsername()).thenReturn(USERNAME);
 
             RuntimeException exception =
@@ -127,7 +139,8 @@ class AuthenticationTokenServiceImplTest {
             verify(jwtService).generateAccessToken(USERNAME);
             verify(jwtService, never())
                     .generateRefreshToken(anyString());
-            verify(refreshTokenSessionService, never())
+
+            verify(refreshTokenSessionServiceImpl, never())
                     .createSession(
                             anyString(),
                             any(User.class),
@@ -138,6 +151,7 @@ class AuthenticationTokenServiceImplTest {
         @Test
         @DisplayName("should not create session when refresh token generation fails")
         void shouldNotCreateSessionWhenRefreshTokenGenerationFails() {
+
             when(user.getUsername()).thenReturn(USERNAME);
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(ACCESS_TOKEN);
@@ -159,7 +173,8 @@ class AuthenticationTokenServiceImplTest {
 
             verify(jwtService).generateAccessToken(USERNAME);
             verify(jwtService).generateRefreshToken(USERNAME);
-            verify(refreshTokenSessionService, never())
+
+            verify(refreshTokenSessionServiceImpl, never())
                     .createSession(
                             anyString(),
                             any(User.class),
@@ -170,6 +185,7 @@ class AuthenticationTokenServiceImplTest {
         @Test
         @DisplayName("should propagate session creation exception")
         void shouldPropagateSessionCreationException() {
+
             when(user.getUsername()).thenReturn(USERNAME);
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(ACCESS_TOKEN);
@@ -180,7 +196,7 @@ class AuthenticationTokenServiceImplTest {
                     new RuntimeException("Session creation failed");
 
             doThrow(exception)
-                    .when(refreshTokenSessionService)
+                    .when(refreshTokenSessionServiceImpl)
                     .createSession(
                             REFRESH_TOKEN,
                             user,
@@ -195,7 +211,7 @@ class AuthenticationTokenServiceImplTest {
                     )
             );
 
-            verify(refreshTokenSessionService)
+            verify(refreshTokenSessionServiceImpl)
                     .createSession(
                             REFRESH_TOKEN,
                             user,
@@ -211,16 +227,22 @@ class AuthenticationTokenServiceImplTest {
         @Test
         @DisplayName("should refresh authentication session and return new tokens")
         void shouldRefreshAuthenticationSessionAndReturnNewTokens() {
+
             when(refreshTokenRequest.getRefreshToken())
                     .thenReturn(REFRESH_TOKEN);
-            when(refreshTokenSessionService.findValidSession(REFRESH_TOKEN))
+
+            when(refreshTokenSessionServiceImpl.findValidSession(REFRESH_TOKEN))
                     .thenReturn(currentSession);
+
             when(currentSession.getUser())
                     .thenReturn(user);
+
             when(user.getUsername())
                     .thenReturn(USERNAME);
+
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(NEW_ACCESS_TOKEN);
+
             when(jwtService.generateRefreshToken(USERNAME))
                     .thenReturn(NEW_REFRESH_TOKEN);
 
@@ -233,23 +255,33 @@ class AuthenticationTokenServiceImplTest {
                     NEW_ACCESS_TOKEN,
                     response.getAccessToken()
             );
+
             assertEquals(
                     NEW_REFRESH_TOKEN,
                     response.getRefreshToken()
             );
-            assertEquals("Bearer", response.getTokenType());
+
+            assertEquals(
+                    "Bearer",
+                    response.getTokenType()
+            );
 
             verify(refreshTokenRequest)
                     .getRefreshToken();
-            verify(refreshTokenSessionService)
-                    .findValidSession(REFRESH_TOKEN);
+
             verify(jwtService)
                     .validateRefreshToken(REFRESH_TOKEN);
+
+            verify(refreshTokenSessionServiceImpl)
+                    .findValidSession(REFRESH_TOKEN);
+
             verify(jwtService)
                     .generateAccessToken(USERNAME);
+
             verify(jwtService)
                     .generateRefreshToken(USERNAME);
-            verify(refreshTokenSessionService)
+
+            verify(refreshTokenSessionServiceImpl)
                     .rotateSession(
                             currentSession,
                             NEW_REFRESH_TOKEN
@@ -257,18 +289,24 @@ class AuthenticationTokenServiceImplTest {
         }
 
         @Test
-        @DisplayName("should find session before validating refresh token")
-        void shouldFindSessionBeforeValidatingRefreshToken() {
+        @DisplayName("should validate refresh token before finding session")
+        void shouldValidateRefreshTokenBeforeFindingSession() {
+
             when(refreshTokenRequest.getRefreshToken())
                     .thenReturn(REFRESH_TOKEN);
-            when(refreshTokenSessionService.findValidSession(REFRESH_TOKEN))
+
+            when(refreshTokenSessionServiceImpl.findValidSession(REFRESH_TOKEN))
                     .thenReturn(currentSession);
+
             when(currentSession.getUser())
                     .thenReturn(user);
+
             when(user.getUsername())
                     .thenReturn(USERNAME);
+
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(NEW_ACCESS_TOKEN);
+
             when(jwtService.generateRefreshToken(USERNAME))
                     .thenReturn(NEW_REFRESH_TOKEN);
 
@@ -277,30 +315,46 @@ class AuthenticationTokenServiceImplTest {
             );
 
             InOrder inOrder =
-                    inOrder(
-                            refreshTokenSessionService,
-                            jwtService
-                    );
+                    inOrder(jwtService, refreshTokenSessionServiceImpl);
 
-            inOrder.verify(refreshTokenSessionService)
-                    .findValidSession(REFRESH_TOKEN);
             inOrder.verify(jwtService)
                     .validateRefreshToken(REFRESH_TOKEN);
+
+            inOrder.verify(refreshTokenSessionServiceImpl)
+                    .findValidSession(REFRESH_TOKEN);
+
+            inOrder.verify(jwtService)
+                    .generateAccessToken(USERNAME);
+
+            inOrder.verify(jwtService)
+                    .generateRefreshToken(USERNAME);
+
+            inOrder.verify(refreshTokenSessionServiceImpl)
+                    .rotateSession(
+                            currentSession,
+                            NEW_REFRESH_TOKEN
+                    );
         }
 
         @Test
         @DisplayName("should rotate session after generating new tokens")
         void shouldRotateSessionAfterGeneratingNewTokens() {
+
             when(refreshTokenRequest.getRefreshToken())
                     .thenReturn(REFRESH_TOKEN);
-            when(refreshTokenSessionService.findValidSession(REFRESH_TOKEN))
+
+            when(refreshTokenSessionServiceImpl.findValidSession(REFRESH_TOKEN))
                     .thenReturn(currentSession);
+
             when(currentSession.getUser())
                     .thenReturn(user);
+
             when(user.getUsername())
                     .thenReturn(USERNAME);
+
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(NEW_ACCESS_TOKEN);
+
             when(jwtService.generateRefreshToken(USERNAME))
                     .thenReturn(NEW_REFRESH_TOKEN);
 
@@ -309,18 +363,21 @@ class AuthenticationTokenServiceImplTest {
             );
 
             InOrder inOrder =
-                    inOrder(
-                            jwtService,
-                            refreshTokenSessionService
-                    );
+                    inOrder(jwtService, refreshTokenSessionServiceImpl);
 
             inOrder.verify(jwtService)
                     .validateRefreshToken(REFRESH_TOKEN);
+
+            inOrder.verify(refreshTokenSessionServiceImpl)
+                    .findValidSession(REFRESH_TOKEN);
+
             inOrder.verify(jwtService)
                     .generateAccessToken(USERNAME);
+
             inOrder.verify(jwtService)
                     .generateRefreshToken(USERNAME);
-            inOrder.verify(refreshTokenSessionService)
+
+            inOrder.verify(refreshTokenSessionServiceImpl)
                     .rotateSession(
                             currentSession,
                             NEW_REFRESH_TOKEN
@@ -328,46 +385,11 @@ class AuthenticationTokenServiceImplTest {
         }
 
         @Test
-        @DisplayName("should not validate token when session lookup fails")
-        void shouldNotValidateTokenWhenSessionLookupFails() {
+        @DisplayName("should not find session when refresh token validation fails")
+        void shouldNotFindSessionWhenRefreshTokenValidationFails() {
+
             when(refreshTokenRequest.getRefreshToken())
                     .thenReturn(REFRESH_TOKEN);
-
-            RuntimeException exception =
-                    new RuntimeException("Session not found");
-
-            when(refreshTokenSessionService.findValidSession(REFRESH_TOKEN))
-                    .thenThrow(exception);
-
-            assertThrows(
-                    RuntimeException.class,
-                    () -> authenticationTokenService.refreshAuthenticationSession(
-                            refreshTokenRequest
-                    )
-            );
-
-            verify(refreshTokenSessionService)
-                    .findValidSession(REFRESH_TOKEN);
-            verify(jwtService, never())
-                    .validateRefreshToken(anyString());
-            verify(jwtService, never())
-                    .generateAccessToken(anyString());
-            verify(jwtService, never())
-                    .generateRefreshToken(anyString());
-            verify(refreshTokenSessionService, never())
-                    .rotateSession(
-                            any(RefreshTokenSession.class),
-                            anyString()
-                    );
-        }
-
-        @Test
-        @DisplayName("should not generate new tokens when refresh token validation fails")
-        void shouldNotGenerateNewTokensWhenRefreshTokenValidationFails() {
-            when(refreshTokenRequest.getRefreshToken())
-                    .thenReturn(REFRESH_TOKEN);
-            when(refreshTokenSessionService.findValidSession(REFRESH_TOKEN))
-                    .thenReturn(currentSession);
 
             doThrow(
                     new IllegalArgumentException(
@@ -386,11 +408,56 @@ class AuthenticationTokenServiceImplTest {
 
             verify(jwtService)
                     .validateRefreshToken(REFRESH_TOKEN);
+
+            verify(refreshTokenSessionServiceImpl, never())
+                    .findValidSession(anyString());
+
             verify(jwtService, never())
                     .generateAccessToken(anyString());
+
             verify(jwtService, never())
                     .generateRefreshToken(anyString());
-            verify(refreshTokenSessionService, never())
+
+            verify(refreshTokenSessionServiceImpl, never())
+                    .rotateSession(
+                            any(RefreshTokenSession.class),
+                            anyString()
+                    );
+        }
+
+        @Test
+        @DisplayName("should not generate new tokens when session lookup fails")
+        void shouldNotGenerateNewTokensWhenSessionLookupFails() {
+
+            when(refreshTokenRequest.getRefreshToken())
+                    .thenReturn(REFRESH_TOKEN);
+
+            RuntimeException exception =
+                    new RuntimeException("Session not found");
+
+            when(refreshTokenSessionServiceImpl.findValidSession(REFRESH_TOKEN))
+                    .thenThrow(exception);
+
+            assertThrows(
+                    RuntimeException.class,
+                    () -> authenticationTokenService.refreshAuthenticationSession(
+                            refreshTokenRequest
+                    )
+            );
+
+            verify(jwtService)
+                    .validateRefreshToken(REFRESH_TOKEN);
+
+            verify(refreshTokenSessionServiceImpl)
+                    .findValidSession(REFRESH_TOKEN);
+
+            verify(jwtService, never())
+                    .generateAccessToken(anyString());
+
+            verify(jwtService, never())
+                    .generateRefreshToken(anyString());
+
+            verify(refreshTokenSessionServiceImpl, never())
                     .rotateSession(
                             any(RefreshTokenSession.class),
                             anyString()
@@ -400,14 +467,19 @@ class AuthenticationTokenServiceImplTest {
         @Test
         @DisplayName("should not rotate session when access token generation fails")
         void shouldNotRotateSessionWhenAccessTokenGenerationFails() {
+
             when(refreshTokenRequest.getRefreshToken())
                     .thenReturn(REFRESH_TOKEN);
-            when(refreshTokenSessionService.findValidSession(REFRESH_TOKEN))
+
+            when(refreshTokenSessionServiceImpl.findValidSession(REFRESH_TOKEN))
                     .thenReturn(currentSession);
+
             when(currentSession.getUser())
                     .thenReturn(user);
+
             when(user.getUsername())
                     .thenReturn(USERNAME);
+
             when(jwtService.generateAccessToken(USERNAME))
                     .thenThrow(
                             new RuntimeException(
@@ -424,11 +496,17 @@ class AuthenticationTokenServiceImplTest {
 
             verify(jwtService)
                     .validateRefreshToken(REFRESH_TOKEN);
+
+            verify(refreshTokenSessionServiceImpl)
+                    .findValidSession(REFRESH_TOKEN);
+
             verify(jwtService)
                     .generateAccessToken(USERNAME);
+
             verify(jwtService, never())
                     .generateRefreshToken(anyString());
-            verify(refreshTokenSessionService, never())
+
+            verify(refreshTokenSessionServiceImpl, never())
                     .rotateSession(
                             any(RefreshTokenSession.class),
                             anyString()
@@ -438,16 +516,22 @@ class AuthenticationTokenServiceImplTest {
         @Test
         @DisplayName("should not rotate session when refresh token generation fails")
         void shouldNotRotateSessionWhenRefreshTokenGenerationFails() {
+
             when(refreshTokenRequest.getRefreshToken())
                     .thenReturn(REFRESH_TOKEN);
-            when(refreshTokenSessionService.findValidSession(REFRESH_TOKEN))
+
+            when(refreshTokenSessionServiceImpl.findValidSession(REFRESH_TOKEN))
                     .thenReturn(currentSession);
+
             when(currentSession.getUser())
                     .thenReturn(user);
+
             when(user.getUsername())
                     .thenReturn(USERNAME);
+
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(NEW_ACCESS_TOKEN);
+
             when(jwtService.generateRefreshToken(USERNAME))
                     .thenThrow(
                             new RuntimeException(
@@ -463,10 +547,18 @@ class AuthenticationTokenServiceImplTest {
             );
 
             verify(jwtService)
+                    .validateRefreshToken(REFRESH_TOKEN);
+
+            verify(refreshTokenSessionServiceImpl)
+                    .findValidSession(REFRESH_TOKEN);
+
+            verify(jwtService)
                     .generateAccessToken(USERNAME);
+
             verify(jwtService)
                     .generateRefreshToken(USERNAME);
-            verify(refreshTokenSessionService, never())
+
+            verify(refreshTokenSessionServiceImpl, never())
                     .rotateSession(
                             any(RefreshTokenSession.class),
                             anyString()
@@ -476,23 +568,29 @@ class AuthenticationTokenServiceImplTest {
         @Test
         @DisplayName("should propagate session rotation exception")
         void shouldPropagateSessionRotationException() {
+
             when(refreshTokenRequest.getRefreshToken())
                     .thenReturn(REFRESH_TOKEN);
-            when(refreshTokenSessionService.findValidSession(REFRESH_TOKEN))
+
+            when(refreshTokenSessionServiceImpl.findValidSession(REFRESH_TOKEN))
                     .thenReturn(currentSession);
+
             when(currentSession.getUser())
                     .thenReturn(user);
+
             when(user.getUsername())
                     .thenReturn(USERNAME);
+
             when(jwtService.generateAccessToken(USERNAME))
                     .thenReturn(NEW_ACCESS_TOKEN);
+
             when(jwtService.generateRefreshToken(USERNAME))
                     .thenReturn(NEW_REFRESH_TOKEN);
 
             doThrow(
                     new RuntimeException("Session rotation failed")
             )
-                    .when(refreshTokenSessionService)
+                    .when(refreshTokenSessionServiceImpl)
                     .rotateSession(
                             currentSession,
                             NEW_REFRESH_TOKEN
@@ -505,7 +603,7 @@ class AuthenticationTokenServiceImplTest {
                     )
             );
 
-            verify(refreshTokenSessionService)
+            verify(refreshTokenSessionServiceImpl)
                     .rotateSession(
                             currentSession,
                             NEW_REFRESH_TOKEN

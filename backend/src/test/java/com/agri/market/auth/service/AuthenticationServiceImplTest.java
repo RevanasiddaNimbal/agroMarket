@@ -50,7 +50,7 @@ class AuthenticationServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
-    private RefreshTokenSessionService refreshTokenSessionService;
+    private RefreshTokenSessionService refreshTokenSessionServiceImpl;
     @Mock
     private EmailVerificationService emailVerificationService;
     @Mock
@@ -644,7 +644,7 @@ class AuthenticationServiceImplTest {
         void shouldRevokeRequestedSession() {
             authenticationService.logout(REFRESH_TOKEN);
 
-            verify(refreshTokenSessionService)
+            verify(refreshTokenSessionServiceImpl)
                     .revokeSession(REFRESH_TOKEN);
         }
 
@@ -655,7 +655,7 @@ class AuthenticationServiceImplTest {
                     new RuntimeException("Logout failed");
 
             doThrow(exception)
-                    .when(refreshTokenSessionService)
+                    .when(refreshTokenSessionServiceImpl)
                     .revokeSession(REFRESH_TOKEN);
 
             assertThrows(
@@ -665,7 +665,7 @@ class AuthenticationServiceImplTest {
                     )
             );
 
-            verify(refreshTokenSessionService)
+            verify(refreshTokenSessionServiceImpl)
                     .revokeSession(REFRESH_TOKEN);
         }
     }
@@ -679,7 +679,7 @@ class AuthenticationServiceImplTest {
         void shouldRevokeAllSessionsForUser() {
             authenticationService.logoutAll(USER_ID);
 
-            verify(refreshTokenSessionService)
+            verify(refreshTokenSessionServiceImpl)
                     .revokeAllSessions(USER_ID);
         }
 
@@ -690,7 +690,7 @@ class AuthenticationServiceImplTest {
                     new RuntimeException("Logout all failed");
 
             doThrow(exception)
-                    .when(refreshTokenSessionService)
+                    .when(refreshTokenSessionServiceImpl)
                     .revokeAllSessions(USER_ID);
 
             assertThrows(
@@ -700,7 +700,7 @@ class AuthenticationServiceImplTest {
                     )
             );
 
-            verify(refreshTokenSessionService)
+            verify(refreshTokenSessionServiceImpl)
                     .revokeAllSessions(USER_ID);
         }
     }

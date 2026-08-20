@@ -41,7 +41,7 @@ class PasswordResetServiceImplTest {
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Mock
-    private RefreshTokenSessionService refreshTokenSessionService;
+    private RefreshTokenSessionService refreshTokenSessionServiceImpl;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -322,7 +322,7 @@ class PasswordResetServiceImplTest {
             verify(passwordResetTokenRepository)
                     .save(token);
 
-            verify(refreshTokenSessionService)
+            verify(refreshTokenSessionServiceImpl)
                     .revokeAllSessions("user-id");
         }
 
@@ -353,7 +353,7 @@ class PasswordResetServiceImplTest {
                     passwordResetTokenRepository,
                     passwordEncoder,
                     userRepository,
-                    refreshTokenSessionService
+                    refreshTokenSessionServiceImpl
             );
         }
 
@@ -389,7 +389,7 @@ class PasswordResetServiceImplTest {
             verifyNoInteractions(
                     passwordEncoder,
                     userRepository,
-                    refreshTokenSessionService
+                    refreshTokenSessionServiceImpl
             );
         }
 
@@ -436,7 +436,7 @@ class PasswordResetServiceImplTest {
             verifyNoInteractions(
                     passwordEncoder,
                     userRepository,
-                    refreshTokenSessionService
+                    refreshTokenSessionServiceImpl
             );
         }
 
@@ -483,7 +483,7 @@ class PasswordResetServiceImplTest {
             verifyNoInteractions(
                     passwordEncoder,
                     userRepository,
-                    refreshTokenSessionService
+                    refreshTokenSessionServiceImpl
             );
         }
 
@@ -512,7 +512,7 @@ class PasswordResetServiceImplTest {
 
             verifyNoInteractions(
                     passwordEncoder,
-                    refreshTokenSessionService
+                    refreshTokenSessionServiceImpl
             );
         }
 
