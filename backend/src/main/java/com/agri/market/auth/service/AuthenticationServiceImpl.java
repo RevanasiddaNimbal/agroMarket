@@ -9,12 +9,15 @@ import com.agri.market.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 
@@ -23,21 +26,19 @@ import static com.agri.market.exception.ErrorCode.*;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AuthenticationServiceImpl
-        implements AuthenticationService {
+public class AuthenticationServiceImpl implements AuthenticationService {
 
     private static final String USER_ROLE = "USER";
 
     private final AuthenticationManager authenticationManager;
-
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-
     private final PasswordEncoder passwordEncoder;
-
     private final RefreshTokenSessionService refreshTokenSessionServiceImpl;
     private final EmailVerificationService emailVerificationService;
     private final AuthenticationTokenService authenticationTokenService;
+    private final PasswordExpirationService passwordExpirationService;
+    private final LoginAttemptService loginAttemptService;
 
     @Override
     @Transactional
@@ -45,47 +46,36 @@ public class AuthenticationServiceImpl
             final RegistrationRequest request,
             final ClientInfo clientInfo
     ) {
+        final String email = normalizeEmail(request.getEmail());
 
-        final String email =
-                normalizeEmail(request.getEmail());
+        log.debug("Registration attempt received for email: {}", email);
 
-        log.debug(
-                "Registration attempt for email: {}",
-                email
-        );
+        validateRegistration(request, email);
 
-        validateRegistration(
-                request,
-                email
-        );
+        final Role userRole = getDefaultUserRole();
 
-        final Role userRole =
-                getDefaultUserRole();
-
-        final User user =
-                User.builder()
-                        .fullName(request.getFullName())
-                        .email(email)
-                        .phoneNumber(request.getPhoneNumber())
-                        .password(
-                                passwordEncoder.encode(
-                                        request.getPassword()
-                                )
-                        )
-                        .roles(List.of(userRole))
-                        .build();
+        final User user = User.builder()
+                .fullName(request.getFullName())
+                .email(email)
+                .phoneNumber(request.getPhoneNumber())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .passwordChangedAt(LocalDateTime.now())
+                .failedLoginAttempts(0)
+                .accountLocked(false)
+                .temporaryLockedUntil(null)
+                .credentialsExpired(false)
+                .roles(List.of(userRole))
+                .build();
 
         user.setEmailVerified(false);
         user.setEnabled(false);
 
-        final User savedUser =
-                userRepository.save(user);
+        final User savedUser = userRepository.save(user);
 
-        emailVerificationService
-                .sendVerificationEmail(savedUser);
+        emailVerificationService.sendVerificationEmail(savedUser);
 
         log.info(
-                "User registered successfully. Verification email sent for user: {}",
+                "User registered successfully. Verification email sent. User: {}",
                 savedUser.getId()
         );
 
@@ -98,41 +88,79 @@ public class AuthenticationServiceImpl
     }
 
     @Override
-    @Transactional
     public AuthenticationResponse login(
             final AuthenticationRequest request,
             final ClientInfo clientInfo
     ) {
+        final String email = normalizeEmail(request.getEmail());
 
-        final String email =
-                normalizeEmail(request.getEmail());
+        log.debug("Authentication request received for email: {}", email);
 
-        log.debug(
-                "Login attempt for email: {}",
-                email
-        );
+        final User user = findUserForLogin(email);
 
-        final Authentication authentication =
-                authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(
-                                email,
-                                request.getPassword()
-                        )
-                );
+        validatePermanentLock(user);
+        loginAttemptService.validateLockStatus(user);
 
-        final User user =
-                (User) authentication.getPrincipal();
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            log.warn(
+                    "Password authentication rejected because no password is configured. User: {}",
+                    user.getId()
+            );
 
-        log.info(
-                "User authenticated successfully with email: {}",
-                email
-        );
+            throw new BusinessException(PASSWORD_LOGIN_NOT_AVAILABLE);
+        }
 
-        return authenticationTokenService
-                .createAuthenticationSession(
-                        user,
-                        clientInfo
-                );
+        try {
+            final Authentication authentication =
+                    authenticationManager.authenticate(
+                            new UsernamePasswordAuthenticationToken(
+                                    email,
+                                    request.getPassword()
+                            )
+                    );
+
+            final User authenticatedUser =
+                    (User) authentication.getPrincipal();
+
+            loginAttemptService.resetAfterSuccessfulLogin(
+                    authenticatedUser
+            );
+
+            passwordExpirationService.validatePasswordPolicy(
+                    authenticatedUser
+            );
+
+            log.info(
+                    "User authenticated successfully. User: {}",
+                    authenticatedUser.getId()
+            );
+
+            return authenticationTokenService.createAuthenticationSession(
+                    authenticatedUser,
+                    clientInfo
+            );
+
+        } catch (BadCredentialsException ex) {
+
+            log.warn(
+                    "Authentication failed due to invalid credentials. User: {}",
+                    user.getId()
+            );
+
+            loginAttemptService.recordFailedLogin(user);
+
+            throw new BusinessException(BAD_CREDENTIALS);
+
+
+        } catch (LockedException ex) {
+
+            log.warn(
+                    "Authentication rejected because account is permanently locked. User: {}",
+                    user.getId()
+            );
+
+            throw new BusinessException(ACCOUNT_LOCKED);
+        }
     }
 
     @Override
@@ -140,42 +168,39 @@ public class AuthenticationServiceImpl
     public AuthenticationResponse refreshToken(
             final RefreshTokenRequest request
     ) {
+        log.debug("Refresh token request received");
 
-        return authenticationTokenService
-                .refreshAuthenticationSession(
+        final AuthenticationResponse response =
+                authenticationTokenService.refreshAuthenticationSession(
                         request
                 );
+
+        log.info("Authentication session refreshed successfully");
+
+        return response;
     }
 
     @Override
     @Transactional
-    public void logout(
-            final String refreshToken
-    ) {
+    public void logout(final String refreshToken) {
 
-        log.debug("Logout attempt");
+        log.debug("Logout request received");
 
-        refreshTokenSessionServiceImpl
-                .revokeSession(refreshToken);
+        refreshTokenSessionServiceImpl.revokeSession(refreshToken);
 
-        log.info(
-                "User session logged out successfully"
-        );
+        log.info("User session logged out successfully");
     }
 
     @Override
     @Transactional
-    public void logoutAll(
-            final String userId
-    ) {
+    public void logoutAll(final String userId) {
 
         log.info(
                 "Logout all sessions requested for user: {}",
                 userId
         );
 
-        refreshTokenSessionServiceImpl
-                .revokeAllSessions(userId);
+        refreshTokenSessionServiceImpl.revokeAllSessions(userId);
 
         log.info(
                 "All sessions revoked successfully for user: {}",
@@ -183,23 +208,46 @@ public class AuthenticationServiceImpl
         );
     }
 
+    private User findUserForLogin(final String email) {
+
+        return userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> {
+
+                    log.warn(
+                            "Authentication rejected because user was not found. Email: {}",
+                            email
+                    );
+
+                    return new BusinessException(USER_NOT_REGISTERED);
+                });
+    }
+
+    private void validatePermanentLock(final User user) {
+
+        if (!user.isAccountLocked()) {
+            return;
+        }
+
+        log.warn(
+                "Authentication rejected because permanent account lock is active. User: {}",
+                user.getId()
+        );
+
+        throw new BusinessException(ACCOUNT_LOCKED);
+    }
+
     private void validateRegistration(
             final RegistrationRequest request,
             final String normalizedEmail
     ) {
-
-        if (userRepository.existsByEmailIgnoreCase(
-                normalizedEmail
-        )) {
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
 
             log.warn(
-                    "Registration rejected: email already exists - {}",
+                    "Registration rejected because email already exists: {}",
                     normalizedEmail
             );
 
-            throw new BusinessException(
-                    EMAIL_ALREADY_EXISTS
-            );
+            throw new BusinessException(EMAIL_ALREADY_EXISTS);
         }
 
         if (userRepository.existsByPhoneNumberIgnoreCase(
@@ -207,12 +255,10 @@ public class AuthenticationServiceImpl
         )) {
 
             log.warn(
-                    "Registration rejected: phone number already exists"
+                    "Registration rejected because phone number already exists"
             );
 
-            throw new BusinessException(
-                    PHONE_ALREADY_EXISTS
-            );
+            throw new BusinessException(PHONE_ALREADY_EXISTS);
         }
 
         if (!request.getPassword().equals(
@@ -220,12 +266,10 @@ public class AuthenticationServiceImpl
         )) {
 
             log.warn(
-                    "Registration rejected: password confirmation mismatch"
+                    "Registration rejected because password confirmation does not match"
             );
 
-            throw new BusinessException(
-                    PASSWORD_MISMATCH
-            );
+            throw new BusinessException(PASSWORD_MISMATCH);
         }
     }
 
@@ -240,15 +284,11 @@ public class AuthenticationServiceImpl
                             USER_ROLE
                     );
 
-                    return new BusinessException(
-                            ROLE_NOT_FOUND
-                    );
+                    return new BusinessException(ROLE_NOT_FOUND);
                 });
     }
 
-    private String normalizeEmail(
-            final String email
-    ) {
+    private String normalizeEmail(final String email) {
 
         return email
                 .trim()

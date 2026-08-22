@@ -37,6 +37,11 @@ public enum ErrorCode {
             "The provided phone number cannot be used.",
             CONFLICT
     ),
+    USER_NOT_REGISTERED(
+            "USER_NOT_REGISTERED",
+            "The user is not registered.Please register.",
+            NOT_FOUND
+    ),
     // PASSWORD
 
     INVALID_CURRENT_PASSWORD(
@@ -49,6 +54,22 @@ public enum ErrorCode {
             "ERR_PASSWORD_MISMATCH",
             "The passwords do not match.",
             BAD_REQUEST
+    ),
+    PASSWORD_EXPIRED(
+            "PASSWORD_EXPIRED",
+            "Your password has expired. Please change your password.",
+            UNAUTHORIZED
+    ),
+    ACCOUNT_LOCKED(
+            "ACCOUNT_LOCKED",
+            "Your account is temporarily locked due to too many failed login attempts.",
+            UNAUTHORIZED
+    ),
+
+    TOO_MANY_FAILED_ATTEMPTS(
+            "TOO_MANY_FAILED_ATTEMPTS",
+            "Too many failed login attempts. Please try again later.",
+            UNAUTHORIZED
     ),
 
     // PASSWORD RESET
@@ -70,7 +91,17 @@ public enum ErrorCode {
             "The password reset request is invalid.",
             BAD_REQUEST
     ),
+    PASSWORD_LOGIN_NOT_AVAILABLE(
+            "PASSWORD_LOGIN_NOT_AVAILABLE",
+            "Password login is not available for this account. Use OAuth login or set a password first.",
+            UNAUTHORIZED
+    ),
 
+    PASSWORD_ALREADY_SET(
+            "PASSWORD_ALREADY_SET",
+            "Password is already set for this account. Use change password instead.",
+            CONFLICT
+    ),
     // ROLE
 
     ROLE_NOT_FOUND(

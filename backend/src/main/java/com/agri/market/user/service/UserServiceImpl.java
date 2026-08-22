@@ -3,6 +3,7 @@ package com.agri.market.user.service;
 import com.agri.market.exception.BusinessException;
 import com.agri.market.user.dto.ChangePasswordRequestDto;
 import com.agri.market.user.dto.ProfileUpdateRequestDto;
+import com.agri.market.user.dto.SetPasswordRequestDto;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.mapper.UserMapper;
 import com.agri.market.user.repository.UserRepository;
@@ -13,6 +14,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 import static com.agri.market.exception.ErrorCode.*;
 
@@ -57,6 +60,41 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public void setPassword(
+            final SetPasswordRequestDto request,
+            final String userEmail
+    ) {
+        if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+            log.warn(
+                    "Password setup rejected because passwords do not match. User: {}",
+                    userEmail
+            );
+            throw new BusinessException(PASSWORD_MISMATCH);
+        }
+
+        final User user = findUserByEmail(userEmail);
+
+        if (user.getPassword() != null && !user.getPassword().isBlank()) {
+            log.warn(
+                    "Password setup rejected because password is already set. User: {}",
+                    userEmail
+            );
+            throw new BusinessException(PASSWORD_ALREADY_SET);
+        }
+
+        final LocalDateTime now = LocalDateTime.now();
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordChangedAt(now);
+        user.setCredentialsExpired(false);
+        user.setFailedLoginAttempts(0);
+        user.setTemporaryLockedUntil(null);
+
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
     public void changePassword(
             final ChangePasswordRequestDto request,
             final String userEmail
@@ -91,7 +129,10 @@ public class UserServiceImpl implements UserService {
         user.setPassword(
                 passwordEncoder.encode(request.getNewPassword())
         );
-
+        user.setPasswordChangedAt(LocalDateTime.now());
+        user.setCredentialsExpired(false);
+        user.setFailedLoginAttempts(0);
+        user.setTemporaryLockedUntil(null);
         userRepository.save(user);
 
         log.info("Password changed successfully for user: {}", userEmail);

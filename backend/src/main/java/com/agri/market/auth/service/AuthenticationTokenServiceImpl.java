@@ -50,7 +50,8 @@ public class AuthenticationTokenServiceImpl
 
         return buildAuthenticationResponse(
                 tokens.accessToken(),
-                tokens.refreshToken()
+                tokens.refreshToken(),
+                user
         );
     }
 
@@ -95,7 +96,8 @@ public class AuthenticationTokenServiceImpl
 
         return buildAuthenticationResponse(
                 tokens.accessToken(),
-                tokens.refreshToken()
+                tokens.refreshToken(),
+                user
         );
     }
 
@@ -125,13 +127,14 @@ public class AuthenticationTokenServiceImpl
 
     private AuthenticationResponse buildAuthenticationResponse(
             final String accessToken,
-            final String refreshToken
+            final String refreshToken,
+            final User user
     ) {
-
         return AuthenticationResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType(TOKEN_TYPE)
+                .hasPassword(user.getPassword() != null)
                 .build();
     }
 

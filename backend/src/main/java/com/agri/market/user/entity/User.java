@@ -66,6 +66,13 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean accountLocked = false;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    @Column(name = "temporary_locked_until")
+    private LocalDateTime temporaryLockedUntil;
+
     @Column(
             name = "profile_picture_url",
             nullable = true,
@@ -136,4 +143,5 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return enabled;
     }
+
 }

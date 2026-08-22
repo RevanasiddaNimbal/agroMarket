@@ -32,4 +32,11 @@ public class AuthenticationResponse {
             example = "Bearer"
     )
     private String tokenType;
+
+    @JsonProperty("has_password")
+    @Schema(
+            description = "Indicates whether the user has a password configured",
+            example = "true"
+    )
+    private boolean hasPassword;
 }

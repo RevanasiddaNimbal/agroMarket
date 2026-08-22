@@ -41,47 +41,37 @@ public class PasswordResetServiceImpl
     public void forgotPassword(
             final ForgotPasswordRequest request
     ) {
+        final String email = request.getEmail().trim();
 
-        final String email =
-                request.getEmail().trim();
-
-        final User user =
-                userRepository
-                        .findByEmailIgnoreCase(email)
-                        .orElse(null);
+        final User user = userRepository
+                .findByEmailIgnoreCase(email)
+                .orElse(null);
 
         if (user == null) {
-
             log.info(
                     "Password reset request processed for unknown account"
             );
-
             return;
         }
 
-        passwordResetTokenRepository
-                .deleteAllByUser(user);
+        passwordResetTokenRepository.deleteAllByUser(user);
 
-        final String rawToken =
-                tokenGenerator.generate();
+        final String rawToken = tokenGenerator.generate();
 
-        final String tokenHash =
-                tokenHasher.hash(rawToken);
+        final String tokenHash = tokenHasher.hash(rawToken);
 
-        final LocalDateTime expiresAt =
-                LocalDateTime.now()
-                        .plusMinutes(
-                                emailProperties
-                                        .getPasswordResetTokenExpirationMinutes()
-                        );
+        final LocalDateTime expiresAt = LocalDateTime.now()
+                .plusMinutes(
+                        emailProperties
+                                .getPasswordResetTokenExpirationMinutes()
+                );
 
-        final PasswordResetToken resetToken =
-                PasswordResetToken.builder()
-                        .user(user)
-                        .tokenHash(tokenHash)
-                        .expiresAt(expiresAt)
-                        .used(false)
-                        .build();
+        final PasswordResetToken resetToken = PasswordResetToken.builder()
+                .user(user)
+                .tokenHash(tokenHash)
+                .expiresAt(expiresAt)
+                .used(false)
+                .build();
 
         passwordResetTokenRepository.save(resetToken);
 
@@ -106,19 +96,15 @@ public class PasswordResetServiceImpl
     public void resetPassword(
             final ResetPasswordRequest request
     ) {
-
         validatePasswords(request);
 
         final String tokenHash =
-                tokenHasher.hash(
-                        request.getToken()
-                );
+                tokenHasher.hash(request.getToken());
 
         final PasswordResetToken resetToken =
                 passwordResetTokenRepository
                         .findByTokenHash(tokenHash)
                         .orElseThrow(() -> {
-
                             log.warn(
                                     "Invalid password reset token supplied"
                             );
@@ -130,8 +116,9 @@ public class PasswordResetServiceImpl
 
         validateResetToken(resetToken);
 
-        final User user =
-                resetToken.getUser();
+        final User user = resetToken.getUser();
+
+        final LocalDateTime now = LocalDateTime.now();
 
         user.setPassword(
                 passwordEncoder.encode(
@@ -139,16 +126,21 @@ public class PasswordResetServiceImpl
                 )
         );
 
+        user.setPasswordChangedAt(now);
+        user.setCredentialsExpired(false);
+        user.setFailedLoginAttempts(0);
+        user.setTemporaryLockedUntil(null);
+
         resetToken.markAsUsed();
 
         userRepository.save(user);
         passwordResetTokenRepository.save(resetToken);
 
-        refreshTokenSessionService
-                .revokeAllSessions(user.getId());
+        refreshTokenSessionService.revokeAllSessions(user.getId());
 
         log.info(
-                "Password reset completed successfully for user: {}",
+                "Password reset completed successfully for user: {}. " +
+                        "Temporary login lock cleared.",
                 user.getId()
         );
     }
@@ -156,9 +148,7 @@ public class PasswordResetServiceImpl
     private void validateResetToken(
             final PasswordResetToken resetToken
     ) {
-
         if (resetToken.isUsed()) {
-
             log.warn(
                     "Attempt to reuse password reset token: {}",
                     resetToken.getId()
@@ -170,7 +160,6 @@ public class PasswordResetServiceImpl
         }
 
         if (resetToken.isExpired()) {
-
             log.warn(
                     "Expired password reset token used: {}",
                     resetToken.getId()
@@ -185,7 +174,6 @@ public class PasswordResetServiceImpl
     private void validatePasswords(
             final ResetPasswordRequest request
     ) {
-
         if (!request.getNewPassword()
                 .equals(request.getConfirmPassword())) {
 

@@ -2,6 +2,7 @@ package com.agri.market.user.service;
 
 import com.agri.market.user.dto.ChangePasswordRequestDto;
 import com.agri.market.user.dto.ProfileUpdateRequestDto;
+import com.agri.market.user.dto.SetPasswordRequestDto;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
 public interface UserService extends UserDetailsService {
@@ -15,4 +16,6 @@ public interface UserService extends UserDetailsService {
     void reactivateAccount(String userId);
 
     void deleteAccount(String userId);
+
+    void setPassword(SetPasswordRequestDto request, String userId);
 }

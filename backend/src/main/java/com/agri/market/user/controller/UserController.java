@@ -2,6 +2,7 @@ package com.agri.market.user.controller;
 
 import com.agri.market.user.dto.ChangePasswordRequestDto;
 import com.agri.market.user.dto.ProfileUpdateRequestDto;
+import com.agri.market.user.dto.SetPasswordRequestDto;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -86,6 +87,40 @@ public class UserController {
             final Authentication authentication
     ) {
         userService.changePassword(
+                request,
+                getAuthenticatedUserEmail(authentication)
+        );
+    }
+
+    @Operation(
+            summary = "Set current user's password",
+            description = "Sets a password for the currently authenticated user who does not have a password configured."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Password set successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid password or password confirmation"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "User already has a password configured"
+            )
+    })
+    @PatchMapping("/me/set-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setPassword(
+            @Valid @RequestBody final SetPasswordRequestDto request,
+            final Authentication authentication
+    ) {
+        userService.setPassword(
                 request,
                 getAuthenticatedUserEmail(authentication)
         );
