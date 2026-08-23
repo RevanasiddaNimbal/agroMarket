@@ -1,4 +1,4 @@
-package com.agri.market.security.config;
+package com.agri.market.security.properties;
 
 import lombok.Getter;
 import lombok.Setter;

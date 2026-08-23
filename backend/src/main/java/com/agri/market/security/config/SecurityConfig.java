@@ -2,6 +2,8 @@ package com.agri.market.security.config;
 
 import com.agri.market.security.jwt.JwtAuthenticationFilter;
 import com.agri.market.security.oauth2.handler.OAuth2SuccessHandler;
+import com.agri.market.security.properties.LoginAttemptProperties;
+import com.agri.market.security.properties.PasswordSecurityProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;

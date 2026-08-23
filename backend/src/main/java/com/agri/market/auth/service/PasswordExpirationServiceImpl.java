@@ -2,7 +2,7 @@ package com.agri.market.auth.service;
 
 import com.agri.market.exception.BusinessException;
 import com.agri.market.exception.ErrorCode;
-import com.agri.market.security.config.PasswordSecurityProperties;
+import com.agri.market.security.properties.PasswordSecurityProperties;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
