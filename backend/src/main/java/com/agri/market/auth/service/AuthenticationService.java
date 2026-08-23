@@ -9,12 +9,12 @@ public interface AuthenticationService {
             ClientInfo clientInfo
     );
 
-    AuthenticationResponse login(
+    AuthenticationResult login(
             AuthenticationRequest request,
             ClientInfo clientInfo
     );
 
-    AuthenticationResponse refreshToken(
+    AuthenticationResult refreshToken(
             RefreshTokenRequest request
     );
 

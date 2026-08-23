@@ -1,6 +1,6 @@
 package com.agri.market.security.oauth2.service;
 
-import com.agri.market.auth.dto.AuthenticationResponse;
+import com.agri.market.auth.dto.AuthenticationResult;
 import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.auth.service.AuthenticationTokenService;
 import com.agri.market.user.entity.User;
@@ -20,7 +20,7 @@ public class OAuth2TokenExchangeServiceImpl
 
     @Override
     @Transactional
-    public AuthenticationResponse exchange(
+    public AuthenticationResult exchange(
             final String code,
             final ClientInfo clientInfo
     ) {
@@ -37,7 +37,7 @@ public class OAuth2TokenExchangeServiceImpl
                 user.getId()
         );
 
-        final AuthenticationResponse response =
+        final AuthenticationResult response =
                 authenticationTokenService
                         .createAuthenticationSession(
                                 user,

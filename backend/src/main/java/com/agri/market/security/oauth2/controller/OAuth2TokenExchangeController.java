@@ -1,6 +1,6 @@
 package com.agri.market.security.oauth2.controller;
 
-import com.agri.market.auth.dto.AuthenticationResponse;
+import com.agri.market.auth.dto.AuthenticationResult;
 import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.security.client.ClientInfoResolver;
 import com.agri.market.security.oauth2.dto.OAuthCodeExchangeRequest;
@@ -51,7 +51,7 @@ public class OAuth2TokenExchangeController {
             )
     })
     @PostMapping("/exchange")
-    public ResponseEntity<AuthenticationResponse> exchange(
+    public ResponseEntity<AuthenticationResult> exchange(
             @Valid @RequestBody final OAuthCodeExchangeRequest request,
             final HttpServletRequest httpRequest
     ) {
@@ -63,7 +63,7 @@ public class OAuth2TokenExchangeController {
         final ClientInfo clientInfo =
                 clientInfoResolver.resolve(httpRequest);
 
-        final AuthenticationResponse response =
+        final AuthenticationResult response =
                 oauth2TokenExchangeService.exchange(
                         request.getCode(),
                         clientInfo

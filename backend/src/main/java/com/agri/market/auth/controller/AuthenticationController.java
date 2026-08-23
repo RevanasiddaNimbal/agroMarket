@@ -1,6 +1,7 @@
 package com.agri.market.auth.controller;
 
 import com.agri.market.auth.dto.*;
+import com.agri.market.auth.service.AuthenticationCookieService;
 import com.agri.market.auth.service.AuthenticationService;
 import com.agri.market.security.client.ClientInfoResolver;
 import com.agri.market.user.entity.User;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,8 @@ public class AuthenticationController {
     private final ClientInfoResolver clientInfoResolver;
 
     private final AuthenticationService authenticationService;
+
+    private final AuthenticationCookieService authenticationCookieService;
 
     @Operation(
             summary = "Register a new user",
@@ -97,7 +101,8 @@ public class AuthenticationController {
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> login(
             @Valid @RequestBody final AuthenticationRequest request,
-            final HttpServletRequest httpRequest
+            final HttpServletRequest httpRequest,
+            final HttpServletResponse httpResponse
     ) {
 
         log.info("Authentication request received");
@@ -105,11 +110,23 @@ public class AuthenticationController {
         final ClientInfo clientInfo =
                 clientInfoResolver.resolve(httpRequest);
 
-        final AuthenticationResponse response =
+        final AuthenticationResult result =
                 authenticationService.login(
                         request,
                         clientInfo
                 );
+
+        authenticationCookieService.addAuthenticationCookies(
+                httpResponse,
+                result.getAccessToken(),
+                result.getRefreshToken()
+        );
+
+        final AuthenticationResponse response =
+                AuthenticationResponse.builder()
+                        .hasPassword(result.isHasPassword())
+                        .message("User authenticated successfully")
+                        .build();
 
         log.info("User authenticated successfully");
 
@@ -123,7 +140,7 @@ public class AuthenticationController {
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Tokens refreshed successfully"
+                    description = "Authentication tokens refreshed successfully"
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -136,13 +153,33 @@ public class AuthenticationController {
     })
     @PostMapping("/refresh-token")
     public ResponseEntity<AuthenticationResponse> refreshToken(
-            @Valid @RequestBody final RefreshTokenRequest request
+            final HttpServletRequest httpRequest,
+            final HttpServletResponse httpResponse
     ) {
 
         log.info("Token refresh request received");
 
-        final AuthenticationResponse response =
+        final String refreshToken =
+                authenticationCookieService.getRefreshToken(httpRequest);
+
+        final RefreshTokenRequest request = RefreshTokenRequest.builder()
+                .refreshToken(refreshToken)
+                .build();
+
+        final AuthenticationResult result =
                 authenticationService.refreshToken(request);
+
+        authenticationCookieService.addAuthenticationCookies(
+                httpResponse,
+                result.getAccessToken(),
+                result.getRefreshToken()
+        );
+
+        final AuthenticationResponse response =
+                AuthenticationResponse.builder()
+                        .hasPassword(result.isHasPassword())
+                        .message("Authentication tokens refreshed successfully")
+                        .build();
 
         log.info("Authentication tokens refreshed successfully");
 
@@ -169,13 +206,19 @@ public class AuthenticationController {
     })
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @Valid @RequestBody final RefreshTokenRequest request
+            final HttpServletRequest httpRequest,
+            final HttpServletResponse httpResponse
     ) {
 
         log.info("Logout request received");
 
-        authenticationService.logout(
-                request.getRefreshToken()
+        final String refreshToken =
+                authenticationCookieService.getRefreshToken(httpRequest);
+
+        authenticationService.logout(refreshToken);
+
+        authenticationCookieService.clearAuthenticationCookies(
+                httpResponse
         );
 
         log.info("User logged out successfully");
@@ -199,7 +242,8 @@ public class AuthenticationController {
     })
     @PostMapping("/logout-all")
     public ResponseEntity<Void> logoutAll(
-            @AuthenticationPrincipal final User user
+            @AuthenticationPrincipal final User user,
+            final HttpServletResponse httpResponse
     ) {
 
         log.info(
@@ -209,6 +253,10 @@ public class AuthenticationController {
 
         authenticationService.logoutAll(
                 user.getId()
+        );
+
+        authenticationCookieService.clearAuthenticationCookies(
+                httpResponse
         );
 
         log.info(

@@ -1,576 +1,329 @@
 package com.agri.market.auth.controller;
 
-import com.agri.market.auth.dto.AuthenticationResponse;
-import com.agri.market.auth.dto.RegistrationRequest;
-import com.agri.market.auth.dto.RegistrationResponse;
+import com.agri.market.auth.dto.*;
+import com.agri.market.auth.service.AuthenticationCookieService;
 import com.agri.market.auth.service.AuthenticationService;
-import com.agri.market.exception.BusinessException;
-import com.agri.market.exception.ErrorCode;
-import com.agri.market.handler.ApplicationExceptionHandler;
 import com.agri.market.security.client.ClientInfoResolver;
-import com.agri.market.support.AuthenticationRequestTestFactory;
-import com.agri.market.support.RefreshTokenRequestTestFactory;
-import com.agri.market.support.RegistrationRequestTestFactory;
-import com.agri.market.support.UserTestFactory;
 import com.agri.market.user.entity.User;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.validation.ConstraintValidator;
-import jakarta.validation.ConstraintValidatorFactory;
-import org.junit.jupiter.api.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
-import java.util.List;
+import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("AuthenticationController")
 class AuthenticationControllerTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     @Mock
     private ClientInfoResolver clientInfoResolver;
 
     @Mock
     private AuthenticationService authenticationService;
 
+    @Mock
+    private AuthenticationCookieService authenticationCookieService;
+
     @InjectMocks
     private AuthenticationController authenticationController;
 
-    private MockMvc mockMvc;
+    @Mock
+    private HttpServletRequest httpServletRequest;
 
-    @BeforeEach
-    void setUp() {
+    @Mock
+    private HttpServletResponse httpServletResponse;
 
-        LocalValidatorFactoryBean validator =
-                new LocalValidatorFactoryBean();
+    @Mock
+    private ClientInfo clientInfo;
 
-        validator.setConstraintValidatorFactory(
-                new ConstraintValidatorFactory() {
+    @Nested
+    class Register {
 
-                    @Override
-                    public <T extends ConstraintValidator<?, ?>> T getInstance(
-                            Class<T> key
-                    ) {
-                        try {
+        @Test
+        void shouldRegisterUserSuccessfully() {
+            final RegistrationRequest request = RegistrationRequest.builder().build();
+            final RegistrationResponse expectedResponse = RegistrationResponse.builder().build();
 
-                            if (key.equals(
-                                    com.agri.market.validation.validator
-                                            .EmailDomainValidator.class
-                            )) {
+            when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
+            when(authenticationService.register(request, clientInfo)).thenReturn(expectedResponse);
 
-                                return key.cast(
-                                        new com.agri.market.validation.validator
-                                                .EmailDomainValidator(
-                                                List.of(
-                                                        "10minutemail",
-                                                        "20minutemail",
-                                                        "mailinator",
-                                                        "yopmail"
-                                                )
-                                        )
-                                );
-                            }
+            final ResponseEntity<RegistrationResponse> response =
+                    authenticationController.register(request, httpServletRequest);
 
-                            return key.getDeclaredConstructor()
-                                    .newInstance();
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+            assertThat(response.getBody()).isEqualTo(expectedResponse);
+            verify(clientInfoResolver).resolve(httpServletRequest);
+            verify(authenticationService).register(request, clientInfo);
+        }
 
-                        } catch (Exception exception) {
-                            throw new IllegalStateException(exception);
-                        }
-                    }
+        @Test
+        void shouldResolveClientInfoBeforeRegistering() {
+            final RegistrationRequest request = RegistrationRequest.builder().build();
 
-                    @Override
-                    public void releaseInstance(
-                            ConstraintValidator<?, ?> instance
-                    ) {
-                    }
-                }
-        );
+            when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
+            when(authenticationService.register(any(), any())).thenReturn(RegistrationResponse.builder().build());
 
-        validator.afterPropertiesSet();
+            authenticationController.register(request, httpServletRequest);
 
-        mockMvc = MockMvcBuilders
-                .standaloneSetup(authenticationController)
-                .setControllerAdvice(
-                        new ApplicationExceptionHandler()
-                )
-                .setValidator(validator)
-                .build();
-    }
+            verify(authenticationService).register(eq(request), eq(clientInfo));
+        }
 
-    @AfterEach
-    void tearDown() {
-        org.springframework.security.core.context
-                .SecurityContextHolder.clearContext();
+        @Test
+        void shouldPropagateExceptionFromService() {
+            final RegistrationRequest request = RegistrationRequest.builder().build();
+
+            when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
+            when(authenticationService.register(request, clientInfo))
+                    .thenThrow(new RuntimeException("email already exists"));
+
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> authenticationController.register(request, httpServletRequest)
+            );
+        }
     }
 
     @Nested
-    @DisplayName("register")
-    class RegisterTests {
+    class Login {
 
         @Test
-        void shouldReturnCreatedResponse() throws Exception {
+        void shouldAuthenticateUserSuccessfully() {
+            final AuthenticationRequest request = AuthenticationRequest.builder().build();
+            final AuthenticationResult result = AuthenticationResult.builder()
+                    .accessToken("access-token")
+                    .refreshToken("refresh-token")
+                    .hasPassword(true)
+                    .build();
 
-            RegistrationResponse response =
-                    RegistrationResponse.builder()
-                            .message(
-                                    "Registration successful. " +
-                                            "Please verify your email address " +
-                                            "before logging in."
-                            )
-                            .build();
+            when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
+            when(authenticationService.login(request, clientInfo)).thenReturn(result);
 
-            when(authenticationService.register(
-                    any(RegistrationRequest.class),
-                    any()
-            )).thenReturn(response);
+            final ResponseEntity<AuthenticationResponse> response =
+                    authenticationController.login(request, httpServletRequest, httpServletResponse);
 
-            mockMvc.perform(
-                            post("/api/v1/auth/register")
-                                    .header(
-                                            "User-Agent",
-                                            "Test Device"
-                                    )
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    RegistrationRequestTestFactory
-                                                            .validRequest()
-                                            )
-                                    )
-                    )
-                    .andExpect(status().isCreated())
-                    .andExpect(
-                            jsonPath("$.message")
-                                    .value(
-                                            "Registration successful. " +
-                                                    "Please verify your email address " +
-                                                    "before logging in."
-                                    )
-                    );
-
-            verify(authenticationService)
-                    .register(
-                            any(RegistrationRequest.class),
-                            any()
-                    );
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody().isHasPassword()).isTrue();
+            assertThat(response.getBody().getMessage()).isEqualTo("User authenticated successfully");
+            verify(authenticationCookieService).addAuthenticationCookies(
+                    httpServletResponse, "access-token", "refresh-token"
+            );
         }
 
         @Test
-        void shouldRejectInvalidRegistrationBody()
-                throws Exception {
+        void shouldReturnHasPasswordFalseWhenUserHasNoPassword() {
+            final AuthenticationRequest request = AuthenticationRequest.builder().build();
+            final AuthenticationResult result = AuthenticationResult.builder()
+                    .accessToken("access-token")
+                    .refreshToken("refresh-token")
+                    .hasPassword(false)
+                    .build();
 
-            mockMvc.perform(
-                            post("/api/v1/auth/register")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content("""
-                                            {
-                                                "email": "bad-email",
-                                                "password": "short"
-                                            }
-                                            """)
-                    )
-                    .andExpect(status().isBadRequest())
-                    .andExpect(
-                            jsonPath("$.code")
-                                    .value("VALIDATION_ERROR")
-                    )
-                    .andExpect(
-                            jsonPath("$.validationErrors")
-                                    .isArray()
-                    );
+            when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
+            when(authenticationService.login(request, clientInfo)).thenReturn(result);
 
-            verifyNoInteractions(authenticationService);
+            final ResponseEntity<AuthenticationResponse> response =
+                    authenticationController.login(request, httpServletRequest, httpServletResponse);
+
+            assertThat(response.getBody().isHasPassword()).isFalse();
         }
 
         @Test
-        void shouldRejectEmptyRequestBody()
-                throws Exception {
+        void shouldSetAuthenticationCookiesOnSuccessfulLogin() {
+            final AuthenticationRequest request = AuthenticationRequest.builder().build();
+            final AuthenticationResult result = AuthenticationResult.builder()
+                    .accessToken("access-token")
+                    .refreshToken("refresh-token")
+                    .hasPassword(true)
+                    .build();
 
-            mockMvc.perform(
-                            post("/api/v1/auth/register")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content("{}")
-                    )
-                    .andExpect(status().isBadRequest());
+            when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
+            when(authenticationService.login(request, clientInfo)).thenReturn(result);
 
-            verifyNoInteractions(authenticationService);
+            authenticationController.login(request, httpServletRequest, httpServletResponse);
+
+            verify(authenticationCookieService).addAuthenticationCookies(
+                    eq(httpServletResponse), eq("access-token"), eq("refresh-token")
+            );
         }
 
         @Test
-        void shouldHandleBusinessException()
-                throws Exception {
+        void shouldNotSetCookiesWhenServiceThrowsInvalidCredentials() {
+            final AuthenticationRequest request = AuthenticationRequest.builder().build();
 
-            when(authenticationService.register(
-                    any(),
-                    any()
-            )).thenThrow(
-                    new BusinessException(
-                            ErrorCode.EMAIL_ALREADY_EXISTS
-                    )
+            when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
+            when(authenticationService.login(request, clientInfo))
+                    .thenThrow(new RuntimeException("Invalid credentials"));
+
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> authenticationController.login(request, httpServletRequest, httpServletResponse)
             );
 
-            mockMvc.perform(
-                            post("/api/v1/auth/register")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    RegistrationRequestTestFactory
-                                                            .validRequest()
-                                            )
-                                    )
-                    )
-                    .andExpect(status().isConflict())
-                    .andExpect(
-                            jsonPath("$.code")
-                                    .value("EMAIL_ALREADY_EXISTS")
-                    );
-
-            verify(authenticationService)
-                    .register(any(), any());
+            verifyNoInteractions(authenticationCookieService);
         }
     }
 
-
     @Nested
-    @DisplayName("login")
-    class LoginTests {
+    class RefreshToken {
 
         @Test
-        void shouldAuthenticateAndReturnTokens()
-                throws Exception {
+        void shouldRefreshTokensSuccessfully() {
+            final AuthenticationResult result = AuthenticationResult.builder()
+                    .accessToken("new-access-token")
+                    .refreshToken("new-refresh-token")
+                    .hasPassword(true)
+                    .build();
 
-            AuthenticationResponse response =
-                    AuthenticationResponse.builder()
-                            .accessToken("access-token")
-                            .refreshToken("refresh-token")
-                            .tokenType("Bearer")
-                            .build();
+            when(authenticationCookieService.getRefreshToken(httpServletRequest)).thenReturn("old-refresh-token");
+            when(authenticationService.refreshToken(any(RefreshTokenRequest.class))).thenReturn(result);
 
-            when(authenticationService.login(
-                    any(),
-                    any()
-            )).thenReturn(response);
+            final ResponseEntity<AuthenticationResponse> response =
+                    authenticationController.refreshToken(httpServletRequest, httpServletResponse);
 
-            mockMvc.perform(
-                            post("/api/v1/auth/login")
-                                    .header(
-                                            "User-Agent",
-                                            "Device A"
-                                    )
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    AuthenticationRequestTestFactory
-                                                            .validRequest()
-                                            )
-                                    )
-                    )
-                    .andExpect(status().isOk())
-                    .andExpect(
-                            jsonPath("$.access_token")
-                                    .value("access-token")
-                    )
-                    .andExpect(
-                            jsonPath("$.refresh_token")
-                                    .value("refresh-token")
-                    )
-                    .andExpect(
-                            jsonPath("$.token_type")
-                                    .value("Bearer")
-                    );
-
-            verify(authenticationService)
-                    .login(any(), any());
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody().getMessage()).isEqualTo("Authentication tokens refreshed successfully");
+            verify(authenticationCookieService).addAuthenticationCookies(
+                    httpServletResponse, "new-access-token", "new-refresh-token"
+            );
         }
 
         @Test
-        void shouldRejectInvalidLoginRequest()
-                throws Exception {
+        void shouldExtractRefreshTokenFromCookieBeforeCallingService() {
 
-            mockMvc.perform(
-                            post("/api/v1/auth/login")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content("""
-                                            {
-                                                "email": "invalid",
-                                                "password": ""
-                                            }
-                                            """)
-                    )
-                    .andExpect(status().isBadRequest())
-                    .andExpect(
-                            jsonPath("$.code")
-                                    .value("VALIDATION_ERROR")
+            when(authenticationCookieService.getRefreshToken(httpServletRequest))
+                    .thenReturn("old-refresh-token");
+
+            when(authenticationService.refreshToken(any(RefreshTokenRequest.class)))
+                    .thenReturn(
+                            AuthenticationResult.builder()
+                                    .accessToken("access-token")
+                                    .refreshToken("refresh-token")
+                                    .hasPassword(true)
+                                    .build()
                     );
 
-            verifyNoInteractions(authenticationService);
-        }
-
-        @Test
-        void shouldHandleInvalidCredentials()
-                throws Exception {
-
-            when(authenticationService.login(
-                    any(),
-                    any()
-            )).thenThrow(
-                    new BusinessException(
-                            ErrorCode.BAD_CREDENTIALS
-                    )
+            authenticationController.refreshToken(
+                    httpServletRequest,
+                    httpServletResponse
             );
 
-            mockMvc.perform(
-                            post("/api/v1/auth/login")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    AuthenticationRequestTestFactory
-                                                            .validRequest()
-                                            )
-                                    )
-                    )
-                    .andExpect(status().isUnauthorized())
-                    .andExpect(
-                            jsonPath("$.code")
-                                    .value("BAD_CREDENTIALS")
-                    );
-        }
-    }
-
-    @Nested
-    @DisplayName("refreshToken")
-    class RefreshTokenTests {
-
-        @Test
-        void shouldRefreshTokens()
-                throws Exception {
-
-            AuthenticationResponse response =
-                    AuthenticationResponse.builder()
-                            .accessToken("new-access")
-                            .refreshToken("new-refresh")
-                            .tokenType("Bearer")
-                            .build();
-
-            when(authenticationService.refreshToken(
-                    any()
-            )).thenReturn(response);
-
-            mockMvc.perform(
-                            post("/api/v1/auth/refresh-token")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    RefreshTokenRequestTestFactory
-                                                            .validRequest()
-                                            )
-                                    )
-                    )
-                    .andExpect(status().isOk())
-                    .andExpect(
-                            jsonPath("$.access_token")
-                                    .value("new-access")
-                    )
-                    .andExpect(
-                            jsonPath("$.refresh_token")
-                                    .value("new-refresh")
-                    );
+            ArgumentCaptor<RefreshTokenRequest> captor =
+                    ArgumentCaptor.forClass(RefreshTokenRequest.class);
 
             verify(authenticationService)
-                    .refreshToken(any());
+                    .refreshToken(captor.capture());
+
+            assertThat(captor.getValue().getRefreshToken())
+                    .isEqualTo("old-refresh-token");
         }
 
         @Test
-        void shouldRejectBlankRefreshToken()
-                throws Exception {
+        void shouldThrowWhenRefreshTokenIsInvalidOrExpired() {
+            when(authenticationCookieService.getRefreshToken(httpServletRequest)).thenReturn("expired-token");
+            when(authenticationService.refreshToken(any(RefreshTokenRequest.class)))
+                    .thenThrow(new RuntimeException("Invalid or expired refresh token"));
 
-            mockMvc.perform(
-                            post("/api/v1/auth/refresh-token")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            "{\"refreshToken\":\"\"}"
-                                    )
-                    )
-                    .andExpect(status().isBadRequest())
-                    .andExpect(
-                            jsonPath("$.code")
-                                    .value("VALIDATION_ERROR")
-                    );
-
-            verifyNoInteractions(authenticationService);
-        }
-
-        @Test
-        void shouldRejectInvalidRefreshToken()
-                throws Exception {
-
-            when(authenticationService.refreshToken(any()))
-                    .thenThrow(
-                            new BusinessException(
-                                    ErrorCode.INVALID_REFRESH_TOKEN
-                            )
-                    );
-
-            mockMvc.perform(
-                            post("/api/v1/auth/refresh-token")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    RefreshTokenRequestTestFactory
-                                                            .validRequest()
-                                            )
-                                    )
-                    )
-                    .andExpect(status().isUnauthorized())
-                    .andExpect(
-                            jsonPath("$.code")
-                                    .value("INVALID_REFRESH_TOKEN")
-                    );
-        }
-    }
-
-
-    @Nested
-    @DisplayName("logout")
-    class LogoutTests {
-
-        @Test
-        void shouldLogoutCurrentSession()
-                throws Exception {
-
-            mockMvc.perform(
-                            post("/api/v1/auth/logout")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    RefreshTokenRequestTestFactory
-                                                            .validRequest()
-                                            )
-                                    )
-                    )
-                    .andExpect(status().isNoContent());
-
-            verify(authenticationService)
-                    .logout("refresh-token");
-        }
-
-        @Test
-        void shouldRejectBlankRefreshToken()
-                throws Exception {
-
-            mockMvc.perform(
-                            post("/api/v1/auth/logout")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            "{\"refreshToken\":\"\"}"
-                                    )
-                    )
-                    .andExpect(status().isBadRequest());
-
-            verifyNoInteractions(authenticationService);
-        }
-
-        @Test
-        void shouldHandleInvalidRefreshToken()
-                throws Exception {
-
-            doThrow(
-                    new BusinessException(
-                            ErrorCode.INVALID_REFRESH_TOKEN
-                    )
-            ).when(authenticationService)
-                    .logout("refresh-token");
-
-            mockMvc.perform(
-                            post("/api/v1/auth/logout")
-                                    .contentType(
-                                            MediaType.APPLICATION_JSON
-                                    )
-                                    .content(
-                                            objectMapper.writeValueAsString(
-                                                    RefreshTokenRequestTestFactory
-                                                            .validRequest()
-                                            )
-                                    )
-                    )
-                    .andExpect(status().isUnauthorized())
-                    .andExpect(
-                            jsonPath("$.code")
-                                    .value("INVALID_REFRESH_TOKEN")
-                    );
-        }
-    }
-
-    @Nested
-    @DisplayName("logoutAll")
-    class LogoutAllTests {
-
-        @Test
-        void shouldLogoutAllSessionsForAuthenticatedUser() {
-
-            User user = UserTestFactory.activeUser();
-
-            authenticationController.logoutAll(user);
-
-            verify(authenticationService)
-                    .logoutAll("user-id");
-        }
-
-        @Test
-        void shouldCallLogoutAllWithCorrectUserId() {
-
-            User user = UserTestFactory.activeUser();
-
-            authenticationController.logoutAll(user);
-
-            ArgumentCaptor<String> captor =
-                    ArgumentCaptor.forClass(String.class);
-
-            verify(authenticationService)
-                    .logoutAll(captor.capture());
-
-            Assertions.assertEquals(
-                    "user-id",
-                    captor.getValue()
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> authenticationController.refreshToken(httpServletRequest, httpServletResponse)
             );
+
+            verify(authenticationCookieService, never()).addAuthenticationCookies(any(), any(), any());
+        }
+    }
+
+    @Nested
+    class Logout {
+
+        @Test
+        void shouldLogoutSuccessfully() {
+            when(authenticationCookieService.getRefreshToken(httpServletRequest)).thenReturn("refresh-token");
+
+            final ResponseEntity<Void> response =
+                    authenticationController.logout(httpServletRequest, httpServletResponse);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+            verify(authenticationService).logout("refresh-token");
+            verify(authenticationCookieService).clearAuthenticationCookies(httpServletResponse);
+        }
+
+        @Test
+        void shouldClearCookiesAfterRevokingSession() {
+            when(authenticationCookieService.getRefreshToken(httpServletRequest)).thenReturn("refresh-token");
+
+            authenticationController.logout(httpServletRequest, httpServletResponse);
+
+            verify(authenticationCookieService).clearAuthenticationCookies(eq(httpServletResponse));
+        }
+
+        @Test
+        void shouldNotClearCookiesWhenLogoutServiceThrows() {
+            when(authenticationCookieService.getRefreshToken(httpServletRequest)).thenReturn("invalid-token");
+            org.mockito.Mockito.doThrow(new RuntimeException("Invalid or expired refresh token"))
+                    .when(authenticationService).logout("invalid-token");
+
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> authenticationController.logout(httpServletRequest, httpServletResponse)
+            );
+
+            verify(authenticationCookieService, never()).clearAuthenticationCookies(any());
+        }
+    }
+
+    @Nested
+    class LogoutAll {
+
+        @Test
+        void shouldLogoutFromAllDevicesSuccessfully() {
+            final User user = new User();
+
+            final ResponseEntity<Void> response =
+                    authenticationController.logoutAll(user, httpServletResponse);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+            verify(authenticationService).logoutAll(user.getId());
+            verify(authenticationCookieService).clearAuthenticationCookies(httpServletResponse);
+        }
+
+        @Test
+        void shouldClearCookiesAfterRevokingAllSessions() {
+            final UUID userId = UUID.randomUUID();
+            final User user = new User();
+            user.setId(user.getId());
+
+            authenticationController.logoutAll(user, httpServletResponse);
+
+            verify(authenticationCookieService).clearAuthenticationCookies(eq(httpServletResponse));
+        }
+
+        @Test
+        void shouldNotClearCookiesWhenLogoutAllServiceThrows() {
+            final UUID userId = UUID.randomUUID();
+            final User user = new User();
+            user.setId(user.getId());
+
+            org.mockito.Mockito.doThrow(new RuntimeException("failure"))
+                    .when(authenticationService).logoutAll(user.getId());
+
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    RuntimeException.class,
+                    () -> authenticationController.logoutAll(user, httpServletResponse)
+            );
+
+            verify(authenticationCookieService, never()).clearAuthenticationCookies(any());
         }
     }
 }

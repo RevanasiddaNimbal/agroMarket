@@ -1,6 +1,6 @@
 package com.agri.market.auth.service;
 
-import com.agri.market.auth.dto.AuthenticationResponse;
+import com.agri.market.auth.dto.AuthenticationResult;
 import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.auth.dto.RefreshTokenRequest;
 import com.agri.market.auth.entity.RefreshTokenSession;
@@ -64,7 +64,7 @@ class AuthenticationTokenServiceImplTest {
             when(jwtService.generateRefreshToken(USERNAME))
                     .thenReturn(REFRESH_TOKEN);
 
-            AuthenticationResponse response =
+            AuthenticationResult response =
                     authenticationTokenService.createAuthenticationSession(
                             user,
                             clientInfo
@@ -246,7 +246,7 @@ class AuthenticationTokenServiceImplTest {
             when(jwtService.generateRefreshToken(USERNAME))
                     .thenReturn(NEW_REFRESH_TOKEN);
 
-            AuthenticationResponse response =
+            AuthenticationResult response =
                     authenticationTokenService.refreshAuthenticationSession(
                             refreshTokenRequest
                     );

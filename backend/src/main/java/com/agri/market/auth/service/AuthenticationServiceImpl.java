@@ -88,7 +88,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public AuthenticationResponse login(
+    public AuthenticationResult login(
             final AuthenticationRequest request,
             final ClientInfo clientInfo
     ) {
@@ -165,12 +165,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     @Transactional
-    public AuthenticationResponse refreshToken(
+    public AuthenticationResult refreshToken(
             final RefreshTokenRequest request
     ) {
         log.debug("Refresh token request received");
 
-        final AuthenticationResponse response =
+        final AuthenticationResult response =
                 authenticationTokenService.refreshAuthenticationSession(
                         request
                 );

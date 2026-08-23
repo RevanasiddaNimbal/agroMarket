@@ -3,6 +3,7 @@ package com.agri.market.security.jwt;
 import com.agri.market.user.service.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
@@ -25,6 +26,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
+    private static final String ACCESS_TOKEN_COOKIE = "access_token";
+
     private final JwtService jwtService;
     private final UserService userDetailsService;
 
@@ -35,25 +38,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull final FilterChain filterChain
     ) throws ServletException, IOException {
 
-        final String authorizationHeader =
-                request.getHeader(HttpHeaders.AUTHORIZATION);
+        final String jwt = resolveToken(request);
 
-        if (authorizationHeader == null
-                || !authorizationHeader.startsWith(BEARER_PREFIX)) {
-
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        final String jwt = authorizationHeader.substring(BEARER_PREFIX.length());
-
-        if (jwt.isBlank()) {
-            log.debug(
-                    "Empty Bearer token received for {} {}",
-                    request.getMethod(),
-                    request.getRequestURI()
-            );
-
+        if (jwt == null || jwt.isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -72,12 +59,57 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    private String resolveToken(
+            final HttpServletRequest request
+    ) {
+
+        final String authorizationHeader =
+                request.getHeader(HttpHeaders.AUTHORIZATION);
+
+        if (authorizationHeader != null
+                && authorizationHeader.startsWith(BEARER_PREFIX)) {
+
+            final String jwt =
+                    authorizationHeader.substring(BEARER_PREFIX.length());
+
+            if (!jwt.isBlank()) {
+                return jwt;
+            }
+
+            log.debug("Empty Bearer token received");
+            return null;
+        }
+
+        return extractAccessTokenFromCookie(request);
+    }
+
+    private String extractAccessTokenFromCookie(
+            final HttpServletRequest request
+    ) {
+
+        final Cookie[] cookies = request.getCookies();
+
+        if (cookies == null) {
+            return null;
+        }
+
+        for (final Cookie cookie : cookies) {
+
+            if (ACCESS_TOKEN_COOKIE.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
+    }
+
     private void authenticateUser(
             final String jwt,
             final HttpServletRequest request
     ) {
 
-        final String username = jwtService.extractUsername(jwt);
+        final String username =
+                jwtService.extractUsername(jwt);
 
         if (username == null) {
             log.debug("JWT did not contain a valid subject");
@@ -91,7 +123,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final UserDetails userDetails =
                 userDetailsService.loadUserByUsername(username);
 
-        if (!jwtService.isTokenValid(jwt, userDetails.getUsername())) {
+        if (!jwtService.isTokenValid(
+                jwt,
+                userDetails.getUsername()
+        )) {
             log.debug("JWT validation failed for authenticated user");
             return;
         }

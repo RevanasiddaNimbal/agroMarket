@@ -2,6 +2,8 @@ package com.agri.market.security.config;
 
 import com.agri.market.security.jwt.JwtAuthenticationFilter;
 import com.agri.market.security.oauth2.handler.OAuth2SuccessHandler;
+import com.agri.market.security.properties.AuthenticationCookieProperties;
+import com.agri.market.security.properties.CorsProperties;
 import com.agri.market.security.properties.LoginAttemptProperties;
 import com.agri.market.security.properties.PasswordSecurityProperties;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
-@EnableConfigurationProperties({PasswordSecurityProperties.class, LoginAttemptProperties.class})
+@EnableConfigurationProperties({
+        PasswordSecurityProperties.class,
+        LoginAttemptProperties.class,
+        AuthenticationCookieProperties.class,
+        CorsProperties.class
+})
 public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
@@ -57,6 +64,8 @@ public class SecurityConfig {
             final HttpSecurity http) throws Exception {
 
         http
+                .cors(cors -> {
+                })
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .sessionManagement(session -> session

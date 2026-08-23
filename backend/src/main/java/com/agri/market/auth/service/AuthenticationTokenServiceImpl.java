@@ -1,6 +1,6 @@
 package com.agri.market.auth.service;
 
-import com.agri.market.auth.dto.AuthenticationResponse;
+import com.agri.market.auth.dto.AuthenticationResult;
 import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.auth.dto.RefreshTokenRequest;
 import com.agri.market.auth.entity.RefreshTokenSession;
@@ -24,7 +24,7 @@ public class AuthenticationTokenServiceImpl
 
     @Override
     @Transactional
-    public AuthenticationResponse createAuthenticationSession(
+    public AuthenticationResult createAuthenticationSession(
             final User user,
             final ClientInfo clientInfo
     ) {
@@ -57,7 +57,7 @@ public class AuthenticationTokenServiceImpl
 
     @Override
     @Transactional
-    public AuthenticationResponse refreshAuthenticationSession(
+    public AuthenticationResult refreshAuthenticationSession(
             final RefreshTokenRequest request
     ) {
 
@@ -125,12 +125,12 @@ public class AuthenticationTokenServiceImpl
         );
     }
 
-    private AuthenticationResponse buildAuthenticationResponse(
+    private AuthenticationResult buildAuthenticationResponse(
             final String accessToken,
             final String refreshToken,
             final User user
     ) {
-        return AuthenticationResponse.builder()
+        return AuthenticationResult.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType(TOKEN_TYPE)

@@ -1,6 +1,6 @@
 package com.agri.market.security.oauth2.service;
 
-import com.agri.market.auth.dto.AuthenticationResponse;
+import com.agri.market.auth.dto.AuthenticationResult;
 import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.auth.service.AuthenticationTokenService;
 import com.agri.market.user.entity.User;
@@ -35,7 +35,7 @@ class OAuth2TokenExchangeServiceImplTest {
     private ClientInfo clientInfo;
 
     @Mock
-    private AuthenticationResponse authenticationResponse;
+    private AuthenticationResult authenticationResult;
 
     private OAuth2TokenExchangeServiceImpl service;
 
@@ -61,16 +61,16 @@ class OAuth2TokenExchangeServiceImplTest {
             when(authenticationTokenService.createAuthenticationSession(
                     user,
                     clientInfo
-            )).thenReturn(authenticationResponse);
+            )).thenReturn(authenticationResult);
 
-            AuthenticationResponse result =
+            AuthenticationResult result =
                     service.exchange(
                             CODE,
                             clientInfo
                     );
 
             assertThat(result)
-                    .isSameAs(authenticationResponse);
+                    .isSameAs(authenticationResult);
 
             verify(oauthLoginCodeService)
                     .exchangeCode(CODE);
@@ -94,16 +94,16 @@ class OAuth2TokenExchangeServiceImplTest {
             when(authenticationTokenService.createAuthenticationSession(
                     user,
                     clientInfo
-            )).thenReturn(authenticationResponse);
+            )).thenReturn(authenticationResult);
 
-            AuthenticationResponse result =
+            AuthenticationResult result =
                     service.exchange(
                             code,
                             clientInfo
                     );
 
             assertThat(result)
-                    .isSameAs(authenticationResponse);
+                    .isSameAs(authenticationResult);
 
             verify(oauthLoginCodeService)
                     .exchangeCode(code);
@@ -125,7 +125,7 @@ class OAuth2TokenExchangeServiceImplTest {
             when(authenticationTokenService.createAuthenticationSession(
                     user,
                     clientInfo
-            )).thenReturn(authenticationResponse);
+            )).thenReturn(authenticationResult);
 
             service.exchange(
                     CODE,
@@ -149,16 +149,16 @@ class OAuth2TokenExchangeServiceImplTest {
             when(authenticationTokenService.createAuthenticationSession(
                     user,
                     clientInfo
-            )).thenReturn(authenticationResponse);
+            )).thenReturn(authenticationResult);
 
-            AuthenticationResponse result =
+            AuthenticationResult result =
                     service.exchange(
                             CODE,
                             clientInfo
                     );
 
             assertThat(result)
-                    .isEqualTo(authenticationResponse);
+                    .isEqualTo(authenticationResult);
         }
 
         @Test

@@ -1,6 +1,6 @@
 package com.agri.market.security.oauth2.controller;
 
-import com.agri.market.auth.dto.AuthenticationResponse;
+import com.agri.market.auth.dto.AuthenticationResult;
 import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.security.client.ClientInfoResolver;
 import com.agri.market.security.oauth2.dto.OAuthCodeExchangeRequest;
@@ -36,7 +36,7 @@ class OAuth2TokenExchangeControllerTest {
     private HttpServletRequest httpServletRequest;
     private OAuthCodeExchangeRequest exchangeRequest;
     private ClientInfo clientInfo;
-    private AuthenticationResponse authenticationResponse;
+    private AuthenticationResult authenticationResult;
 
     @BeforeEach
     void setUp() {
@@ -50,7 +50,7 @@ class OAuth2TokenExchangeControllerTest {
                 .deviceName("JUnit-Agent")
                 .build();
 
-        authenticationResponse = AuthenticationResponse.builder()
+        authenticationResult = AuthenticationResult.builder()
                 .accessToken("access-token")
                 .refreshToken("refresh-token")
                 .build();
@@ -65,13 +65,13 @@ class OAuth2TokenExchangeControllerTest {
         void shouldReturnOkWithAuthenticationResponse() {
             when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
             when(oauth2TokenExchangeService.exchange(exchangeRequest.getCode(), clientInfo))
-                    .thenReturn(authenticationResponse);
+                    .thenReturn(authenticationResult);
 
-            ResponseEntity<AuthenticationResponse> result =
+            ResponseEntity<AuthenticationResult> result =
                     controller.exchange(exchangeRequest, httpServletRequest);
 
             assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(result.getBody()).isEqualTo(authenticationResponse);
+            assertThat(result.getBody()).isEqualTo(authenticationResult);
         }
 
         @Test
@@ -79,7 +79,7 @@ class OAuth2TokenExchangeControllerTest {
         void shouldResolveClientInfoBeforeExchange() {
             when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
             when(oauth2TokenExchangeService.exchange(anyString(), any(ClientInfo.class)))
-                    .thenReturn(authenticationResponse);
+                    .thenReturn(authenticationResult);
 
             controller.exchange(exchangeRequest, httpServletRequest);
 
@@ -96,7 +96,7 @@ class OAuth2TokenExchangeControllerTest {
 
             when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
             when(oauth2TokenExchangeService.exchange(anyString(), any(ClientInfo.class)))
-                    .thenReturn(authenticationResponse);
+                    .thenReturn(authenticationResult);
 
             controller.exchange(customRequest, httpServletRequest);
 
@@ -106,7 +106,7 @@ class OAuth2TokenExchangeControllerTest {
         @Test
         @DisplayName("Should return response body matching service output")
         void shouldReturnResponseBodyMatchingServiceOutput() {
-            AuthenticationResponse customResponse = AuthenticationResponse.builder()
+            AuthenticationResult customResponse = AuthenticationResult.builder()
                     .accessToken("custom-access-token")
                     .refreshToken("custom-refresh-token")
                     .build();
@@ -115,7 +115,7 @@ class OAuth2TokenExchangeControllerTest {
             when(oauth2TokenExchangeService.exchange(anyString(), any(ClientInfo.class)))
                     .thenReturn(customResponse);
 
-            ResponseEntity<AuthenticationResponse> result =
+            ResponseEntity<AuthenticationResult> result =
                     controller.exchange(exchangeRequest, httpServletRequest);
 
             assertThat(result.getBody()).isNotNull();
@@ -128,7 +128,7 @@ class OAuth2TokenExchangeControllerTest {
         void shouldCallDependenciesExactlyOnce() {
             when(clientInfoResolver.resolve(httpServletRequest)).thenReturn(clientInfo);
             when(oauth2TokenExchangeService.exchange(anyString(), any(ClientInfo.class)))
-                    .thenReturn(authenticationResponse);
+                    .thenReturn(authenticationResult);
 
             controller.exchange(exchangeRequest, httpServletRequest);
 
