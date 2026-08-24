@@ -3,6 +3,7 @@ package com.agri.market.auth.controller;
 import com.agri.market.auth.dto.*;
 import com.agri.market.auth.service.AuthenticationCookieService;
 import com.agri.market.auth.service.AuthenticationService;
+import com.agri.market.security.client.ClientInfo;
 import com.agri.market.security.client.ClientInfoResolver;
 import com.agri.market.user.entity.User;
 import jakarta.servlet.http.HttpServletRequest;

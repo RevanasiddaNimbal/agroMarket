@@ -1,6 +1,6 @@
 package com.agri.market.security.oauth2.service;
 
-import com.agri.market.exception.BusinessException;
+import com.agri.market.common.exception.BusinessException;
 import com.agri.market.security.jwt.TokenHasher;
 import com.agri.market.security.oauth2.entity.OAuthLoginCode;
 import com.agri.market.security.oauth2.repository.OAuthLoginCodeRepository;
@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
-import static com.agri.market.exception.ErrorCode.*;
+import static com.agri.market.common.exception.ErrorCode.*;
 
 @Service
 @RequiredArgsConstructor

@@ -1,6 +1,6 @@
 package com.agri.market.support;
 
-import com.agri.market.auth.dto.ClientInfo;
+import com.agri.market.security.client.ClientInfo;
 
 public final class ClientInfoTestFactory {
 

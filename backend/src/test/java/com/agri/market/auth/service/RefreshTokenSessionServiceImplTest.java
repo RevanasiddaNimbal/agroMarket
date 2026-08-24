@@ -2,7 +2,7 @@ package com.agri.market.auth.service;
 
 import com.agri.market.auth.entity.RefreshTokenSession;
 import com.agri.market.auth.repository.RefreshTokenSessionRepository;
-import com.agri.market.exception.BusinessException;
+import com.agri.market.common.exception.BusinessException;
 import com.agri.market.security.jwt.JwtService;
 import com.agri.market.security.jwt.TokenHasher;
 import com.agri.market.support.ClientInfoTestFactory;
@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static com.agri.market.exception.ErrorCode.INVALID_REFRESH_TOKEN;
+import static com.agri.market.common.exception.ErrorCode.INVALID_REFRESH_TOKEN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

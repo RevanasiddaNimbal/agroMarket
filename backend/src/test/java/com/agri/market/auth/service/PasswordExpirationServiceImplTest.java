@@ -1,8 +1,9 @@
 package com.agri.market.auth.service;
 
-import com.agri.market.exception.BusinessException;
-import com.agri.market.exception.ErrorCode;
-import com.agri.market.security.properties.PasswordSecurityProperties;
+import com.agri.market.common.exception.BusinessException;
+import com.agri.market.common.exception.ErrorCode;
+import com.agri.market.password.properties.PasswordSecurityProperties;
+import com.agri.market.password.service.PasswordExpirationServiceImpl;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;

@@ -1,6 +1,6 @@
 package com.agri.market.security.oauth2.service;
 
-import com.agri.market.exception.BusinessException;
+import com.agri.market.common.exception.BusinessException;
 import com.agri.market.security.jwt.TokenHasher;
 import com.agri.market.security.oauth2.entity.OAuthLoginCode;
 import com.agri.market.security.oauth2.repository.OAuthLoginCodeRepository;
@@ -19,7 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static com.agri.market.exception.ErrorCode.*;
+import static com.agri.market.common.exception.ErrorCode.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

@@ -1,6 +1,6 @@
 package com.agri.market.user.service;
 
-import com.agri.market.exception.BusinessException;
+import com.agri.market.common.exception.BusinessException;
 import com.agri.market.support.ChangePasswordRequestTestFactory;
 import com.agri.market.support.ProfileUpdateRequestTestFactory;
 import com.agri.market.support.UserTestFactory;
@@ -26,7 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static com.agri.market.exception.ErrorCode.*;
+import static com.agri.market.common.exception.ErrorCode.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

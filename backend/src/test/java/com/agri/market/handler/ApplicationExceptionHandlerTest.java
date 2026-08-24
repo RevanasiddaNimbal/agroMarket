@@ -1,13 +1,14 @@
 package com.agri.market.handler;
 
-import com.agri.market.exception.BusinessException;
-import com.agri.market.exception.ErrorCode;
+import com.agri.market.common.exception.BusinessException;
+import com.agri.market.common.exception.ErrorCode;
+import com.agri.market.common.handler.ApplicationExceptionHandler;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.BeanUtils;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -16,7 +17,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.core.MethodParameter;
 
 import java.lang.reflect.Method;
 

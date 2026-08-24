@@ -1,7 +1,7 @@
 package com.agri.market.auth.service;
 
-import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.auth.entity.RefreshTokenSession;
+import com.agri.market.security.client.ClientInfo;
 import com.agri.market.user.entity.User;
 
 public interface RefreshTokenSessionService {

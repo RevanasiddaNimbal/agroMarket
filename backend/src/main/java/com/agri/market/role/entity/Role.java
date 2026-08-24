@@ -1,6 +1,6 @@
 package com.agri.market.role.entity;
 
-import com.agri.market.common.BaseEntity;
+import com.agri.market.common.entity.BaseEntity;
 import com.agri.market.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

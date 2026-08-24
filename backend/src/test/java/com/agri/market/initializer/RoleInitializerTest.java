@@ -2,6 +2,7 @@ package com.agri.market.initializer;
 
 import com.agri.market.role.entity.Role;
 import com.agri.market.role.entity.RoleName;
+import com.agri.market.role.initializer.RoleInitializer;
 import com.agri.market.role.repository.RoleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;

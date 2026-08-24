@@ -1,6 +1,5 @@
 package com.agri.market.security.client;
 
-import com.agri.market.auth.dto.ClientInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 

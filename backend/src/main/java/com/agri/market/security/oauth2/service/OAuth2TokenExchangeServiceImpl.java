@@ -1,8 +1,8 @@
 package com.agri.market.security.oauth2.service;
 
 import com.agri.market.auth.dto.AuthenticationResult;
-import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.auth.service.AuthenticationTokenService;
+import com.agri.market.security.client.ClientInfo;
 import com.agri.market.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

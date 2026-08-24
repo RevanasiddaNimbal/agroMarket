@@ -1,8 +1,8 @@
 package com.agri.market.security.oauth2.service;
 
 import com.agri.market.auth.dto.AuthenticationResult;
-import com.agri.market.auth.dto.ClientInfo;
 import com.agri.market.auth.service.AuthenticationTokenService;
+import com.agri.market.security.client.ClientInfo;
 import com.agri.market.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

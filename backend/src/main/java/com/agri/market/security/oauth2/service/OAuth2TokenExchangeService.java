@@ -1,7 +1,7 @@
 package com.agri.market.security.oauth2.service;
 
 import com.agri.market.auth.dto.AuthenticationResult;
-import com.agri.market.auth.dto.ClientInfo;
+import com.agri.market.security.client.ClientInfo;
 
 public interface OAuth2TokenExchangeService {
 

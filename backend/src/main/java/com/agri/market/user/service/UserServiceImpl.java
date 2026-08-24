@@ -1,6 +1,6 @@
 package com.agri.market.user.service;
 
-import com.agri.market.exception.BusinessException;
+import com.agri.market.common.exception.BusinessException;
 import com.agri.market.user.dto.ChangePasswordRequestDto;
 import com.agri.market.user.dto.ProfileUpdateRequestDto;
 import com.agri.market.user.dto.SetPasswordRequestDto;
@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
-import static com.agri.market.exception.ErrorCode.*;
+import static com.agri.market.common.exception.ErrorCode.*;
 
 @Service
 @RequiredArgsConstructor

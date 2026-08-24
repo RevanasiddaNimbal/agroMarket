@@ -1,6 +1,7 @@
 package com.agri.market.auth.service;
 
 import com.agri.market.auth.dto.*;
+import com.agri.market.security.client.ClientInfo;
 
 public interface AuthenticationService {
 

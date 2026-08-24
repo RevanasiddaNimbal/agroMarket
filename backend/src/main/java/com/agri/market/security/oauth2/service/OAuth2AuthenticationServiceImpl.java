@@ -1,6 +1,6 @@
 package com.agri.market.security.oauth2.service;
 
-import com.agri.market.exception.BusinessException;
+import com.agri.market.common.exception.BusinessException;
 import com.agri.market.role.entity.Role;
 import com.agri.market.role.entity.RoleName;
 import com.agri.market.role.repository.RoleRepository;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static com.agri.market.exception.ErrorCode.OAUTH_EMAIL_NOT_AVAILABLE;
+import static com.agri.market.common.exception.ErrorCode.OAUTH_EMAIL_NOT_AVAILABLE;
 
 @Service
 @RequiredArgsConstructor

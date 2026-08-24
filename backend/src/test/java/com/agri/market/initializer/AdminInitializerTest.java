@@ -2,6 +2,7 @@ package com.agri.market.initializer;
 
 import com.agri.market.role.entity.Role;
 import com.agri.market.role.entity.RoleName;
+import com.agri.market.role.initializer.AdminInitializer;
 import com.agri.market.role.repository.RoleRepository;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.repository.UserRepository;
@@ -24,24 +25,19 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AdminInitializerTest {
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private RoleRepository roleRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private ApplicationArguments applicationArguments;
-
-    private AdminInitializer adminInitializer;
-
     private static final String ADMIN_EMAIL = "admin@agrimarket.com";
     private static final String ADMIN_PASSWORD = "Admin@123";
     private static final String ADMIN_PHONE = "9876543210";
     private static final String ENCODED_PASSWORD = "encoded-password";
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private RoleRepository roleRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private ApplicationArguments applicationArguments;
+    private AdminInitializer adminInitializer;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +50,32 @@ class AdminInitializerTest {
         setField(adminInitializer, "adminEmail", ADMIN_EMAIL);
         setField(adminInitializer, "adminPassword", ADMIN_PASSWORD);
         setField(adminInitializer, "adminPhone", ADMIN_PHONE);
+    }
+
+    private Role createAdminRole() {
+        return Role.builder()
+                .name(RoleName.ADMIN.name())
+                .build();
+    }
+
+    private void setField(
+            Object target,
+            String fieldName,
+            String value
+    ) {
+        try {
+            var field = target.getClass()
+                    .getDeclaredField(fieldName);
+
+            field.setAccessible(true);
+            field.set(target, value);
+
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException(
+                    "Failed to set test field: " + fieldName,
+                    exception
+            );
+        }
     }
 
     @Nested
@@ -231,32 +253,6 @@ class AdminInitializerTest {
 
             verifyNoInteractions(roleRepository);
             verifyNoInteractions(passwordEncoder);
-        }
-    }
-
-    private Role createAdminRole() {
-        return Role.builder()
-                .name(RoleName.ADMIN.name())
-                .build();
-    }
-
-    private void setField(
-            Object target,
-            String fieldName,
-            String value
-    ) {
-        try {
-            var field = target.getClass()
-                    .getDeclaredField(fieldName);
-
-            field.setAccessible(true);
-            field.set(target, value);
-
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException(
-                    "Failed to set test field: " + fieldName,
-                    exception
-            );
         }
     }
 }

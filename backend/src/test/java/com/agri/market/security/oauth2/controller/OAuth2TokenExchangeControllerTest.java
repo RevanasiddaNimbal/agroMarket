@@ -1,7 +1,7 @@
 package com.agri.market.security.oauth2.controller;
 
 import com.agri.market.auth.dto.AuthenticationResult;
-import com.agri.market.auth.dto.ClientInfo;
+import com.agri.market.security.client.ClientInfo;
 import com.agri.market.security.client.ClientInfoResolver;
 import com.agri.market.security.oauth2.dto.OAuthCodeExchangeRequest;
 import com.agri.market.security.oauth2.service.OAuth2TokenExchangeService;

@@ -1,9 +1,12 @@
 package com.agri.market.auth.service;
 
 import com.agri.market.auth.dto.*;
-import com.agri.market.exception.BusinessException;
+import com.agri.market.common.exception.BusinessException;
+import com.agri.market.email.service.EmailVerificationService;
+import com.agri.market.password.service.PasswordExpirationService;
 import com.agri.market.role.entity.Role;
 import com.agri.market.role.repository.RoleRepository;
+import com.agri.market.security.client.ClientInfo;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 
-import static com.agri.market.exception.ErrorCode.*;
+import static com.agri.market.common.exception.ErrorCode.*;
 
 @Service
 @RequiredArgsConstructor

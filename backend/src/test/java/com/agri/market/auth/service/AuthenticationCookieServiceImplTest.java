@@ -1,6 +1,6 @@
 package com.agri.market.auth.service;
 
-import com.agri.market.security.properties.AuthenticationCookieProperties;
+import com.agri.market.auth.properties.AuthenticationCookieProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

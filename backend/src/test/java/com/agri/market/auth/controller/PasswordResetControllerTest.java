@@ -1,11 +1,12 @@
 package com.agri.market.auth.controller;
 
-import com.agri.market.auth.dto.ForgotPasswordRequest;
-import com.agri.market.auth.dto.ResetPasswordRequest;
-import com.agri.market.auth.service.PasswordResetService;
-import com.agri.market.exception.BusinessException;
-import com.agri.market.exception.ErrorCode;
-import com.agri.market.handler.ApplicationExceptionHandler;
+import com.agri.market.common.exception.BusinessException;
+import com.agri.market.common.exception.ErrorCode;
+import com.agri.market.common.handler.ApplicationExceptionHandler;
+import com.agri.market.password.controller.PasswordResetController;
+import com.agri.market.password.dto.ForgotPasswordRequest;
+import com.agri.market.password.dto.ResetPasswordRequest;
+import com.agri.market.password.service.PasswordResetService;
 import com.agri.market.validation.validator.EmailDomainValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintValidator;

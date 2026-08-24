@@ -1,10 +1,11 @@
 package com.agri.market.auth.controller;
 
-import com.agri.market.auth.dto.EmailVerificationRequest;
-import com.agri.market.auth.service.EmailVerificationService;
-import com.agri.market.exception.BusinessException;
-import com.agri.market.exception.ErrorCode;
-import com.agri.market.handler.ApplicationExceptionHandler;
+import com.agri.market.common.exception.BusinessException;
+import com.agri.market.common.exception.ErrorCode;
+import com.agri.market.common.handler.ApplicationExceptionHandler;
+import com.agri.market.email.controller.EmailVerificationController;
+import com.agri.market.email.dto.EmailVerificationRequest;
+import com.agri.market.email.service.EmailVerificationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorFactory;

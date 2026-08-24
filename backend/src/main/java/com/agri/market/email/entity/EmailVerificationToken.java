@@ -1,6 +1,6 @@
 package com.agri.market.email.entity;
 
-import com.agri.market.common.BaseEntity;
+import com.agri.market.common.entity.BaseEntity;
 import com.agri.market.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;

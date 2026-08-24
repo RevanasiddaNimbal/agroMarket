@@ -1,11 +1,11 @@
 package com.agri.market.security.config;
 
+import com.agri.market.auth.properties.AuthenticationCookieProperties;
+import com.agri.market.auth.properties.LoginAttemptProperties;
+import com.agri.market.password.properties.PasswordSecurityProperties;
 import com.agri.market.security.jwt.JwtAuthenticationFilter;
 import com.agri.market.security.oauth2.handler.OAuth2SuccessHandler;
-import com.agri.market.security.properties.AuthenticationCookieProperties;
 import com.agri.market.security.properties.CorsProperties;
-import com.agri.market.security.properties.LoginAttemptProperties;
-import com.agri.market.security.properties.PasswordSecurityProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;

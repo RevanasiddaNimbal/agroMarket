@@ -1,12 +1,13 @@
 package com.agri.market.auth.service;
 
-import com.agri.market.auth.dto.ForgotPasswordRequest;
-import com.agri.market.auth.dto.ResetPasswordRequest;
-import com.agri.market.auth.entity.PasswordResetToken;
-import com.agri.market.auth.repository.PasswordResetTokenRepository;
+import com.agri.market.common.exception.BusinessException;
 import com.agri.market.email.config.EmailProperties;
 import com.agri.market.email.service.EmailService;
-import com.agri.market.exception.BusinessException;
+import com.agri.market.password.dto.ForgotPasswordRequest;
+import com.agri.market.password.dto.ResetPasswordRequest;
+import com.agri.market.password.entity.PasswordResetToken;
+import com.agri.market.password.repository.PasswordResetTokenRepository;
+import com.agri.market.password.service.PasswordResetServiceImpl;
 import com.agri.market.security.jwt.TokenHasher;
 import com.agri.market.security.token.TokenGenerator;
 import com.agri.market.user.entity.User;
@@ -25,7 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static com.agri.market.exception.ErrorCode.*;
+import static com.agri.market.common.exception.ErrorCode.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
