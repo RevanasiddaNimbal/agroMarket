@@ -40,7 +40,6 @@ class AuthenticationServiceImplTest {
 
     private static final String EMAIL = "user@example.com";
     private static final String RAW_EMAIL = "  User@Example.COM  ";
-    private static final String PHONE = "9876543210";
     private static final String FULL_NAME = "Test User";
     private static final String PASSWORD = "Password@123";
     private static final String ENCODED_PASSWORD = "encoded-password";
@@ -98,7 +97,6 @@ class AuthenticationServiceImplTest {
     @InjectMocks
     private AuthenticationServiceImpl authenticationService;
 
-
     @Nested
     @DisplayName("register")
     class RegisterTests {
@@ -110,9 +108,6 @@ class AuthenticationServiceImplTest {
             when(registrationRequest.getEmail())
                     .thenReturn(EMAIL);
 
-            when(registrationRequest.getPhoneNumber())
-                    .thenReturn(PHONE);
-
             when(registrationRequest.getPassword())
                     .thenReturn(PASSWORD);
 
@@ -123,9 +118,6 @@ class AuthenticationServiceImplTest {
                     .thenReturn(FULL_NAME);
 
             when(userRepository.existsByEmailIgnoreCase(EMAIL))
-                    .thenReturn(false);
-
-            when(userRepository.existsByPhoneNumberIgnoreCase(PHONE))
                     .thenReturn(false);
 
             when(roleRepository.findByName("USER"))
@@ -158,7 +150,6 @@ class AuthenticationServiceImplTest {
 
             assertEquals(FULL_NAME, user.getFullName());
             assertEquals(EMAIL, user.getEmail());
-            assertEquals(PHONE, user.getPhoneNumber());
             assertEquals(ENCODED_PASSWORD, user.getPassword());
             assertEquals(List.of(userRole), user.getRoles());
 
@@ -179,9 +170,6 @@ class AuthenticationServiceImplTest {
             when(registrationRequest.getEmail())
                     .thenReturn(RAW_EMAIL);
 
-            when(registrationRequest.getPhoneNumber())
-                    .thenReturn(PHONE);
-
             when(registrationRequest.getPassword())
                     .thenReturn(PASSWORD);
 
@@ -192,9 +180,6 @@ class AuthenticationServiceImplTest {
                     .thenReturn(FULL_NAME);
 
             when(userRepository.existsByEmailIgnoreCase(EMAIL))
-                    .thenReturn(false);
-
-            when(userRepository.existsByPhoneNumberIgnoreCase(PHONE))
                     .thenReturn(false);
 
             when(roleRepository.findByName("USER"))
@@ -253,58 +238,6 @@ class AuthenticationServiceImplTest {
             verify(userRepository)
                     .existsByEmailIgnoreCase(EMAIL);
 
-            verify(userRepository, never())
-                    .existsByPhoneNumberIgnoreCase(anyString());
-
-            verify(roleRepository, never())
-                    .findByName(anyString());
-
-            verify(passwordEncoder, never())
-                    .encode(anyString());
-
-            verify(userRepository, never())
-                    .save(any(User.class));
-
-            verify(emailVerificationService, never())
-                    .sendVerificationEmail(any(User.class));
-        }
-
-        @Test
-        @DisplayName("should reject registration when phone number already exists")
-        void shouldRejectRegistrationWhenPhoneNumberAlreadyExists() {
-
-            when(registrationRequest.getEmail())
-                    .thenReturn(EMAIL);
-
-            when(registrationRequest.getPhoneNumber())
-                    .thenReturn(PHONE);
-
-            when(userRepository.existsByEmailIgnoreCase(EMAIL))
-                    .thenReturn(false);
-
-            when(userRepository.existsByPhoneNumberIgnoreCase(PHONE))
-                    .thenReturn(true);
-
-            BusinessException exception =
-                    assertThrows(
-                            BusinessException.class,
-                            () -> authenticationService.register(
-                                    registrationRequest,
-                                    clientInfo
-                            )
-                    );
-
-            assertEquals(
-                    PHONE_ALREADY_EXISTS,
-                    exception.getErrorCode()
-            );
-
-            verify(userRepository)
-                    .existsByEmailIgnoreCase(EMAIL);
-
-            verify(userRepository)
-                    .existsByPhoneNumberIgnoreCase(PHONE);
-
             verify(roleRepository, never())
                     .findByName(anyString());
 
@@ -325,9 +258,6 @@ class AuthenticationServiceImplTest {
             when(registrationRequest.getEmail())
                     .thenReturn(EMAIL);
 
-            when(registrationRequest.getPhoneNumber())
-                    .thenReturn(PHONE);
-
             when(registrationRequest.getPassword())
                     .thenReturn(PASSWORD);
 
@@ -335,9 +265,6 @@ class AuthenticationServiceImplTest {
                     .thenReturn("DifferentPassword@123");
 
             when(userRepository.existsByEmailIgnoreCase(EMAIL))
-                    .thenReturn(false);
-
-            when(userRepository.existsByPhoneNumberIgnoreCase(PHONE))
                     .thenReturn(false);
 
             BusinessException exception =
@@ -356,9 +283,6 @@ class AuthenticationServiceImplTest {
 
             verify(userRepository)
                     .existsByEmailIgnoreCase(EMAIL);
-
-            verify(userRepository)
-                    .existsByPhoneNumberIgnoreCase(PHONE);
 
             verify(roleRepository, never())
                     .findByName(anyString());
@@ -380,9 +304,6 @@ class AuthenticationServiceImplTest {
             when(registrationRequest.getEmail())
                     .thenReturn(EMAIL);
 
-            when(registrationRequest.getPhoneNumber())
-                    .thenReturn(PHONE);
-
             when(registrationRequest.getPassword())
                     .thenReturn(PASSWORD);
 
@@ -390,9 +311,6 @@ class AuthenticationServiceImplTest {
                     .thenReturn(PASSWORD);
 
             when(userRepository.existsByEmailIgnoreCase(EMAIL))
-                    .thenReturn(false);
-
-            when(userRepository.existsByPhoneNumberIgnoreCase(PHONE))
                     .thenReturn(false);
 
             when(roleRepository.findByName("USER"))
@@ -432,9 +350,6 @@ class AuthenticationServiceImplTest {
             when(registrationRequest.getEmail())
                     .thenReturn(EMAIL);
 
-            when(registrationRequest.getPhoneNumber())
-                    .thenReturn(PHONE);
-
             when(registrationRequest.getPassword())
                     .thenReturn(PASSWORD);
 
@@ -445,9 +360,6 @@ class AuthenticationServiceImplTest {
                     .thenReturn(FULL_NAME);
 
             when(userRepository.existsByEmailIgnoreCase(EMAIL))
-                    .thenReturn(false);
-
-            when(userRepository.existsByPhoneNumberIgnoreCase(PHONE))
                     .thenReturn(false);
 
             when(roleRepository.findByName("USER"))
@@ -486,9 +398,6 @@ class AuthenticationServiceImplTest {
             when(registrationRequest.getEmail())
                     .thenReturn(EMAIL);
 
-            when(registrationRequest.getPhoneNumber())
-                    .thenReturn(PHONE);
-
             when(registrationRequest.getPassword())
                     .thenReturn(PASSWORD);
 
@@ -499,9 +408,6 @@ class AuthenticationServiceImplTest {
                     .thenReturn(FULL_NAME);
 
             when(userRepository.existsByEmailIgnoreCase(EMAIL))
-                    .thenReturn(false);
-
-            when(userRepository.existsByPhoneNumberIgnoreCase(PHONE))
                     .thenReturn(false);
 
             when(roleRepository.findByName("USER"))
@@ -522,7 +428,6 @@ class AuthenticationServiceImplTest {
                     .sendVerificationEmail(savedUser);
         }
     }
-
 
     @Nested
     @DisplayName("login")
@@ -565,10 +470,7 @@ class AuthenticationServiceImplTest {
                             clientInfo
                     );
 
-            assertEquals(
-                    expectedResponse,
-                    response
-            );
+            assertEquals(expectedResponse, response);
 
             ArgumentCaptor<UsernamePasswordAuthenticationToken> captor =
                     ArgumentCaptor.forClass(
@@ -581,15 +483,8 @@ class AuthenticationServiceImplTest {
             UsernamePasswordAuthenticationToken token =
                     captor.getValue();
 
-            assertEquals(
-                    EMAIL,
-                    token.getPrincipal()
-            );
-
-            assertEquals(
-                    PASSWORD,
-                    token.getCredentials()
-            );
+            assertEquals(EMAIL, token.getPrincipal());
+            assertEquals(PASSWORD, token.getCredentials());
 
             verify(userRepository)
                     .findByEmailIgnoreCase(EMAIL);
@@ -1036,7 +931,6 @@ class AuthenticationServiceImplTest {
         }
     }
 
-
     @Nested
     @DisplayName("refreshToken")
     class RefreshTokenTests {
@@ -1092,7 +986,6 @@ class AuthenticationServiceImplTest {
                     );
         }
     }
-
 
     @Nested
     @DisplayName("logout")

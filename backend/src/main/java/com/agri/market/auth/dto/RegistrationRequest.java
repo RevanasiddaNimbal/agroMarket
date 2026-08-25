@@ -50,17 +50,6 @@ public class RegistrationRequest {
     )
     private String email;
 
-    @NotBlank(message = "VALIDATION.REGISTRATION.PHONE.BLANK")
-    @Pattern(
-            regexp = "^\\+?[1-9]\\d{9,14}$",
-            message = "VALIDATION.REGISTRATION.PHONE.FORMAT"
-    )
-    @Schema(
-            description = "User's phone number in international format",
-            example = "+919876543210"
-    )
-    private String phoneNumber;
-
     @NotBlank(message = "VALIDATION.REGISTRATION.PASSWORD.BLANK")
     @Size(
             min = 8,

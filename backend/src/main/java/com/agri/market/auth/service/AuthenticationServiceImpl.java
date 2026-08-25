@@ -60,7 +60,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         final User user = User.builder()
                 .fullName(request.getFullName())
                 .email(email)
-                .phoneNumber(request.getPhoneNumber())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .passwordChangedAt(LocalDateTime.now())
                 .failedLoginAttempts(0)
@@ -252,17 +251,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             throw new BusinessException(EMAIL_ALREADY_EXISTS);
         }
-
-        if (userRepository.existsByPhoneNumberIgnoreCase(
-                request.getPhoneNumber()
-        )) {
-
-            log.warn(
-                    "Registration rejected because phone number already exists"
-            );
-
-            throw new BusinessException(PHONE_ALREADY_EXISTS);
-        }
+        
 
         if (!request.getPassword().equals(
                 request.getConfirmPassword()
