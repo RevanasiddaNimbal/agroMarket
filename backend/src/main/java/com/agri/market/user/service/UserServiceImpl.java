@@ -4,6 +4,7 @@ import com.agri.market.common.exception.BusinessException;
 import com.agri.market.user.dto.ChangePasswordRequestDto;
 import com.agri.market.user.dto.ProfileUpdateRequestDto;
 import com.agri.market.user.dto.SetPasswordRequestDto;
+import com.agri.market.user.dto.UserProfileResponseDto;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.mapper.UserMapper;
 import com.agri.market.user.repository.UserRepository;
@@ -203,5 +204,15 @@ public class UserServiceImpl implements UserService {
                             USER_NOT_FOUND
                     );
                 });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfileResponseDto getCurrentUserProfile(
+            final String userEmail
+    ) {
+        final User user = findUserByEmail(userEmail);
+
+        return userMapper.toUserProfileResponseDto(user);
     }
 }

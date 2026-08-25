@@ -1,5 +1,6 @@
 package com.agri.market.user.entity;
 
+import com.agri.market.address.entity.Address;
 import com.agri.market.role.entity.Role;
 import com.agri.market.security.oauth2.entity.OAuthAccount;
 import jakarta.persistence.*;
@@ -103,6 +104,14 @@ public class User implements UserDetails {
     )
     @Builder.Default
     private List<OAuthAccount> oauthAccounts = new ArrayList<>();
+
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<Address> addresses = new ArrayList<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

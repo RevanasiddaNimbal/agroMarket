@@ -1,0 +1,111 @@
+package com.agri.market.address.mapper;
+
+import com.agri.market.address.dto.AddressResponseDto;
+import com.agri.market.address.dto.CreateAddressRequestDto;
+import com.agri.market.address.dto.UpdateAddressRequestDto;
+import com.agri.market.address.entity.Address;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AddressMapper {
+
+    public Address toEntity(
+            final CreateAddressRequestDto request
+    ) {
+        return Address.builder()
+                .addressLine1(request.getAddressLine1())
+                .addressLine2(request.getAddressLine2())
+                .village(request.getVillage())
+                .city(request.getCity())
+                .district(request.getDistrict())
+                .state(request.getState())
+                .pincode(request.getPincode())
+                .country(request.getCountry())
+                .locationType(request.getLocationType())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .addressType(request.getAddressType())
+                .defaultAddress(request.isDefaultAddress())
+                .build();
+    }
+
+    public void updateEntity(
+            final Address address,
+            final UpdateAddressRequestDto request
+    ) {
+        if (request.getAddressLine1() != null) {
+            address.setAddressLine1(request.getAddressLine1());
+        }
+
+        if (request.getAddressLine2() != null) {
+            address.setAddressLine2(request.getAddressLine2());
+        }
+
+        if (request.getVillage() != null) {
+            address.setVillage(request.getVillage());
+        }
+
+        if (request.getCity() != null) {
+            address.setCity(request.getCity());
+        }
+
+        if (request.getDistrict() != null) {
+            address.setDistrict(request.getDistrict());
+        }
+
+        if (request.getState() != null) {
+            address.setState(request.getState());
+        }
+
+        if (request.getPincode() != null) {
+            address.setPincode(request.getPincode());
+        }
+
+        if (request.getCountry() != null) {
+            address.setCountry(request.getCountry());
+        }
+
+        if (request.getLocationType() != null) {
+            address.setLocationType(request.getLocationType());
+        }
+
+        if (request.getLatitude() != null) {
+            address.setLatitude(request.getLatitude());
+        }
+
+        if (request.getLongitude() != null) {
+            address.setLongitude(request.getLongitude());
+        }
+
+        if (request.getAddressType() != null) {
+            address.setAddressType(request.getAddressType());
+        }
+
+        if (request.getDefaultAddress() != null) {
+            address.setDefaultAddress(request.getDefaultAddress());
+        }
+    }
+
+    public AddressResponseDto toResponse(
+            final Address address
+    ) {
+        return AddressResponseDto.builder()
+                .id(address.getId())
+                .addressLine1(address.getAddressLine1())
+                .addressLine2(address.getAddressLine2())
+                .village(address.getVillage())
+                .city(address.getCity())
+                .district(address.getDistrict())
+                .state(address.getState())
+                .pincode(address.getPincode())
+                .country(address.getCountry())
+                .locationType(address.getLocationType())
+                .latitude(address.getLatitude())
+                .longitude(address.getLongitude())
+                .addressType(address.getAddressType())
+                .defaultAddress(address.isDefaultAddress())
+                .createdDate(address.getCreatedDate())
+                .lastModifiedDate(address.getLastModifiedDate())
+                .build();
+    }
+}

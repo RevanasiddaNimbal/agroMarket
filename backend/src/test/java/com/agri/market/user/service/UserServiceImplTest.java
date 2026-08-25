@@ -7,6 +7,7 @@ import com.agri.market.support.UserTestFactory;
 import com.agri.market.user.dto.ChangePasswordRequestDto;
 import com.agri.market.user.dto.ProfileUpdateRequestDto;
 import com.agri.market.user.dto.SetPasswordRequestDto;
+import com.agri.market.user.dto.UserProfileResponseDto;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.mapper.UserMapper;
 import com.agri.market.user.repository.UserRepository;
@@ -863,6 +864,97 @@ class UserServiceImplTest {
                     passwordEncoder,
                     userMapper
             );
+        }
+    }
+
+    @Nested
+    @DisplayName("getCurrentUserProfile")
+    class GetCurrentUserProfileTests {
+
+        @Test
+        void shouldReturnCurrentUserProfile() {
+
+            final User user = UserTestFactory.activeUser();
+
+            final UserProfileResponseDto expectedResponse =
+                    UserProfileResponseDto.builder()
+                            .id(user.getId())
+                            .fullName(user.getFullName())
+                            .email(user.getEmail())
+                            .phoneNumber(user.getPhoneNumber())
+                            .emailVerified(user.isEmailVerified())
+                            .phoneVerified(user.isPhoneVerified())
+                            .profilePictureUrl(user.getProfilePictureUrl())
+                            .build();
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userMapper.toUserProfileResponseDto(user))
+                    .thenReturn(expectedResponse);
+
+            final UserProfileResponseDto result =
+                    userService.getCurrentUserProfile(USER_EMAIL);
+
+            assertThat(result)
+                    .isSameAs(expectedResponse);
+
+            verify(userRepository)
+                    .findByEmailIgnoreCase(USER_EMAIL);
+
+            verify(userMapper)
+                    .toUserProfileResponseDto(user);
+        }
+
+        @Test
+        void shouldThrowWhenUserDoesNotExist() {
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> userService.getCurrentUserProfile(USER_EMAIL)
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex)
+                                            .getErrorCode()
+                            ).isEqualTo(USER_NOT_FOUND)
+                    );
+
+            verify(userRepository)
+                    .findByEmailIgnoreCase(USER_EMAIL);
+
+            verifyNoInteractions(userMapper);
+        }
+
+        @Test
+        void shouldNotSaveUserWhenGettingProfile() {
+
+            final User user = UserTestFactory.activeUser();
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            final UserProfileResponseDto response =
+                    UserProfileResponseDto.builder()
+                            .id(user.getId())
+                            .fullName(user.getFullName())
+                            .email(user.getEmail())
+                            .phoneNumber(user.getPhoneNumber())
+                            .emailVerified(user.isEmailVerified())
+                            .phoneVerified(user.isPhoneVerified())
+                            .profilePictureUrl(user.getProfilePictureUrl())
+                            .build();
+
+            when(userMapper.toUserProfileResponseDto(user))
+                    .thenReturn(response);
+
+            userService.getCurrentUserProfile(USER_EMAIL);
+
+            verify(userRepository, never())
+                    .save(any(User.class));
         }
     }
 }

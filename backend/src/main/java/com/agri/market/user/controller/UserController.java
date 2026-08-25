@@ -3,6 +3,7 @@ package com.agri.market.user.controller;
 import com.agri.market.user.dto.ChangePasswordRequestDto;
 import com.agri.market.user.dto.ProfileUpdateRequestDto;
 import com.agri.market.user.dto.SetPasswordRequestDto;
+import com.agri.market.user.dto.UserProfileResponseDto;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -183,6 +184,33 @@ public class UserController {
     }
 
     @Operation(
+            summary = "Get current user's profile",
+            description = "Returns the complete profile information of the currently authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "User profile retrieved successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "User profile not found"
+            )
+    })
+    @GetMapping("/me")
+    public UserProfileResponseDto getCurrentUserProfile(
+            final Authentication authentication
+    ) {
+        return userService.getCurrentUserProfile(
+                getAuthenticatedUserEmail(authentication)
+        );
+    }
+
+    @Operation(
             summary = "Delete current user's account",
             description = "Permanently deletes the account of the currently authenticated user."
     )
@@ -200,6 +228,7 @@ public class UserController {
                     description = "User account not found"
             )
     })
+
     @DeleteMapping("/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteAccount(

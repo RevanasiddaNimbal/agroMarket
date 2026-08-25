@@ -211,8 +211,26 @@ public enum ErrorCode {
     OAUTH_EMAIL_NOT_AVAILABLE("OAUTH_EMAIL_NOT_AVAILABLE",
             "OAuth email is not available",
             BAD_REQUEST
-    );
+    ),
 
+    // ADDRESS
+    ADDRESS_NOT_FOUND(
+            "ADDRESS_NOT_FOUND",
+            "Address not found.",
+            NOT_FOUND
+    ),
+
+    ADDRESS_COORDINATES_REQUIRED(
+            "ADDRESS_COORDINATES_REQUIRED",
+            "Latitude and longitude are required for a map-based address.",
+            BAD_REQUEST
+    ),
+
+    ADDRESS_COORDINATES_NOT_ALLOWED(
+            "ADDRESS_COORDINATES_NOT_ALLOWED",
+            "Latitude and longitude are not allowed for a manually entered address.",
+            BAD_REQUEST
+    );
     private final String code;
     private final String defaultMessage;
     private final HttpStatus status;
