@@ -12,6 +12,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -654,6 +656,264 @@ class JwtAuthenticationFilterTest {
             ).isEqualTo(existingUser);
 
             verifyNoInteractions(userService);
+        }
+    }
+
+    @Nested
+    @DisplayName("Account availability")
+    class AccountAvailabilityTests {
+
+        @Test
+        void shouldNotAuthenticateDisabledUser()
+                throws Exception {
+
+            final User user =
+                    UserTestFactory.activeUser();
+
+            user.setEnabled(false);
+
+            final String token =
+                    jwtService.generateAccessToken(
+                            user.getUsername()
+                    );
+
+            when(userService.loadUserByUsername(
+                    user.getUsername()
+            )).thenReturn(user);
+
+            final MockHttpServletRequest request =
+                    new MockHttpServletRequest();
+
+            request.addHeader(
+                    HttpHeaders.AUTHORIZATION,
+                    "Bearer " + token
+            );
+
+            request.setMethod("GET");
+            request.setRequestURI("/api/v1/users/me");
+
+            jwtAuthenticationFilter.doFilter(
+                    request,
+                    new MockHttpServletResponse(),
+                    new MockFilterChain()
+            );
+
+            assertThat(
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication()
+            ).isNull();
+
+            verify(userService)
+                    .loadUserByUsername(
+                            user.getUsername()
+                    );
+        }
+
+        @Test
+        void shouldNotAuthenticatePermanentlyLockedUser()
+                throws Exception {
+
+            final User user =
+                    UserTestFactory.activeUser();
+
+            user.setAccountLocked(true);
+
+            final String token =
+                    jwtService.generateAccessToken(
+                            user.getUsername()
+                    );
+
+            when(userService.loadUserByUsername(
+                    user.getUsername()
+            )).thenReturn(user);
+
+            final MockHttpServletRequest request =
+                    new MockHttpServletRequest();
+
+            request.addHeader(
+                    HttpHeaders.AUTHORIZATION,
+                    "Bearer " + token
+            );
+
+            request.setMethod("GET");
+            request.setRequestURI("/api/v1/users/me");
+
+            jwtAuthenticationFilter.doFilter(
+                    request,
+                    new MockHttpServletResponse(),
+                    new MockFilterChain()
+            );
+
+            assertThat(
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication()
+            ).isNull();
+
+            verify(userService)
+                    .loadUserByUsername(
+                            user.getUsername()
+                    );
+        }
+
+        @Test
+        void shouldNotAuthenticateTemporarilyLockedUser()
+                throws Exception {
+
+            final User user =
+                    UserTestFactory.activeUser();
+
+            user.setTemporaryLockedUntil(
+                    LocalDateTime.now().plusMinutes(10)
+            );
+
+            final String token =
+                    jwtService.generateAccessToken(
+                            user.getUsername()
+                    );
+
+            when(userService.loadUserByUsername(
+                    user.getUsername()
+            )).thenReturn(user);
+
+            final MockHttpServletRequest request =
+                    new MockHttpServletRequest();
+
+            request.addHeader(
+                    HttpHeaders.AUTHORIZATION,
+                    "Bearer " + token
+            );
+
+            request.setMethod("GET");
+            request.setRequestURI("/api/v1/users/me");
+
+            jwtAuthenticationFilter.doFilter(
+                    request,
+                    new MockHttpServletResponse(),
+                    new MockFilterChain()
+            );
+
+            assertThat(
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication()
+            ).isNull();
+
+            verify(userService)
+                    .loadUserByUsername(
+                            user.getUsername()
+                    );
+        }
+
+        @Test
+        void shouldAuthenticateUserWhenTemporaryLockHasExpired()
+                throws Exception {
+
+            final User user =
+                    UserTestFactory.activeUser();
+
+            user.setTemporaryLockedUntil(
+                    LocalDateTime.now().minusMinutes(1)
+            );
+
+            final String token =
+                    jwtService.generateAccessToken(
+                            user.getUsername()
+                    );
+
+            when(userService.loadUserByUsername(
+                    user.getUsername()
+            )).thenReturn(user);
+
+            final MockHttpServletRequest request =
+                    new MockHttpServletRequest();
+
+            request.addHeader(
+                    HttpHeaders.AUTHORIZATION,
+                    "Bearer " + token
+            );
+
+            request.setMethod("GET");
+            request.setRequestURI("/api/v1/users/me");
+
+            jwtAuthenticationFilter.doFilter(
+                    request,
+                    new MockHttpServletResponse(),
+                    new MockFilterChain()
+            );
+
+            assertThat(
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication()
+            ).isNotNull();
+
+            assertThat(
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication()
+                            .getPrincipal()
+            ).isEqualTo(user);
+
+            verify(userService)
+                    .loadUserByUsername(
+                            user.getUsername()
+                    );
+        }
+
+        @Test
+        void shouldAuthenticateUserWhenTemporaryLockIsNull()
+                throws Exception {
+
+            final User user =
+                    UserTestFactory.activeUser();
+
+            user.setTemporaryLockedUntil(null);
+
+            final String token =
+                    jwtService.generateAccessToken(
+                            user.getUsername()
+                    );
+
+            when(userService.loadUserByUsername(
+                    user.getUsername()
+            )).thenReturn(user);
+
+            final MockHttpServletRequest request =
+                    new MockHttpServletRequest();
+
+            request.addHeader(
+                    HttpHeaders.AUTHORIZATION,
+                    "Bearer " + token
+            );
+
+            request.setMethod("GET");
+            request.setRequestURI("/api/v1/users/me");
+
+            jwtAuthenticationFilter.doFilter(
+                    request,
+                    new MockHttpServletResponse(),
+                    new MockFilterChain()
+            );
+
+            assertThat(
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication()
+            ).isNotNull();
+
+            assertThat(
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication()
+                            .getPrincipal()
+            ).isEqualTo(user);
+
+            verify(userService)
+                    .loadUserByUsername(
+                            user.getUsername()
+                    );
         }
     }
 }

@@ -275,63 +275,6 @@ public class UserController {
         );
     }
 
-    @Operation(
-            summary = "Deactivate current user's account",
-            description = "Deactivates the account of the currently authenticated user."
-    )
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "204",
-                    description = "Account deactivated successfully"
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required"
-            ),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "Account is already deactivated"
-            )
-    })
-    @PatchMapping("/me/deactivate")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deactivateAccount(
-            final Authentication authentication
-    ) {
-
-        userService.deactivateAccount(
-                getAuthenticatedUserEmail(authentication)
-        );
-    }
-
-    @Operation(
-            summary = "Reactivate current user's account",
-            description = "Reactivates the account of the currently authenticated user."
-    )
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "204",
-                    description = "Account reactivated successfully"
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "Authentication required"
-            ),
-            @ApiResponse(
-                    responseCode = "409",
-                    description = "Account is already active"
-            )
-    })
-    @PatchMapping("/me/reactivate")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void reactivateAccount(
-            final Authentication authentication
-    ) {
-
-        userService.reactivateAccount(
-                getAuthenticatedUserEmail(authentication)
-        );
-    }
 
     @Operation(
             summary = "Get current user's profile",

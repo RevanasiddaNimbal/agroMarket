@@ -94,16 +94,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             final AuthenticationRequest request,
             final ClientInfo clientInfo
     ) {
+
         final String email = normalizeEmail(request.getEmail());
 
-        log.debug("Authentication request received for email: {}", email);
+        log.debug(
+                "Authentication request received for email: {}",
+                email
+        );
 
         final User user = findUserForLogin(email);
 
-        validatePermanentLock(user);
+        loginAttemptService.validateAccountAvailability(user);
+
         loginAttemptService.validateLockStatus(user);
 
         if (user.getPassword() == null || user.getPassword().isBlank()) {
+
             log.warn(
                     "Password authentication rejected because no password is configured. User: {}",
                     user.getId()
@@ -113,6 +119,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         try {
+
             final Authentication authentication =
                     authenticationManager.authenticate(
                             new UsernamePasswordAuthenticationToken(
@@ -127,6 +134,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             loginAttemptService.resetAfterSuccessfulLogin(
                     authenticatedUser
             );
+
 
             passwordExpirationService.validatePasswordPolicy(
                     authenticatedUser
@@ -149,19 +157,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     user.getId()
             );
 
+
             loginAttemptService.recordFailedLogin(user);
 
             throw new BusinessException(BAD_CREDENTIALS);
 
-
         } catch (LockedException ex) {
 
             log.warn(
-                    "Authentication rejected because account is permanently locked. User: {}",
+                    "Authentication rejected because account is locked. User: {}",
                     user.getId()
             );
 
-            throw new BusinessException(ACCOUNT_LOCKED);
+            throw new BusinessException(
+                    PERMANENT_ACCOUNT_LOCKED
+            );
         }
     }
 
@@ -224,20 +234,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 });
     }
 
-    private void validatePermanentLock(final User user) {
-
-        if (!user.isAccountLocked()) {
-            return;
-        }
-
-        log.warn(
-                "Authentication rejected because permanent account lock is active. User: {}",
-                user.getId()
-        );
-
-        throw new BusinessException(ACCOUNT_LOCKED);
-    }
-
     private void validateRegistration(
             final RegistrationRequest request,
             final String normalizedEmail
@@ -251,7 +247,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             throw new BusinessException(EMAIL_ALREADY_EXISTS);
         }
-        
+
 
         if (!request.getPassword().equals(
                 request.getConfirmPassword()

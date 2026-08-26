@@ -4,6 +4,8 @@ import com.agri.market.user.entity.User;
 
 public interface LoginAttemptService {
 
+    void validateAccountAvailability(User user);
+
     void validateLockStatus(User user);
 
     void recordFailedLogin(User user);

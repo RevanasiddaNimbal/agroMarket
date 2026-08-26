@@ -25,94 +25,283 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("ApplicationExceptionHandler")
 class ApplicationExceptionHandlerTest {
 
-    private final ApplicationExceptionHandler handler = new ApplicationExceptionHandler();
+    private final ApplicationExceptionHandler handler =
+            new ApplicationExceptionHandler();
+
 
     @Test
+    @DisplayName("should map business exception")
     void shouldMapBusinessException() {
-        var response = handler.handleBusinessException(new BusinessException(ErrorCode.USER_ALREADY_ACTIVATED, "user@mail.com"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getCode()).isEqualTo("USER_ALREADY_ACTIVATED");
+        var response =
+                handler.handleBusinessException(
+                        new BusinessException(
+                                ErrorCode.EMAIL_ALREADY_EXISTS,
+                                "user@mail.com"
+                        )
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("EMAIL_ALREADY_EXISTS");
     }
 
     @Test
+    @DisplayName("should map account locked business exception")
+    void shouldMapAccountLockedBusinessException() {
+
+        var response =
+                handler.handleBusinessException(
+                        new BusinessException(
+                                ErrorCode.ACCOUNT_LOCKED
+                        )
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("ACCOUNT_LOCKED");
+    }
+
+    @Test
+    @DisplayName("should map permanent account locked business exception")
+    void shouldMapPermanentAccountLockedBusinessException() {
+
+        var response =
+                handler.handleBusinessException(
+                        new BusinessException(
+                                ErrorCode.PERMANENT_ACCOUNT_LOCKED
+                        )
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("PERMANENT_ACCOUNT_LOCKED");
+    }
+
+    @Test
+    @DisplayName("should map password login not available business exception")
+    void shouldMapPasswordLoginNotAvailableBusinessException() {
+
+        var response =
+                handler.handleBusinessException(
+                        new BusinessException(
+                                ErrorCode.PASSWORD_LOGIN_NOT_AVAILABLE
+                        )
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("PASSWORD_LOGIN_NOT_AVAILABLE");
+    }
+
+    @Test
+    @DisplayName("should map disabled exception")
     void shouldMapDisabledException() {
-        var response = handler.handleDisabledException(new DisabledException("disabled"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response.getBody().getCode()).isEqualTo("ERR_USER_DISABLED");
+        var response =
+                handler.handleDisabledException(
+                        new DisabledException("disabled")
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("ERR_USER_DISABLED");
     }
 
     @Test
+    @DisplayName("should map bad credentials exception")
     void shouldMapBadCredentialsException() {
-        var response = handler.handleBadCredentialsException(new BadCredentialsException("bad"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response.getBody().getCode()).isEqualTo("BAD_CREDENTIALS");
+        var response =
+                handler.handleBadCredentialsException(
+                        new BadCredentialsException("bad")
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("BAD_CREDENTIALS");
     }
 
+
     @Test
+    @DisplayName("should map username not found exception")
     void shouldMapUsernameNotFoundException() {
-        var response = handler.handleUsernameNotFoundException(new UsernameNotFoundException("missing"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(response.getBody().getCode()).isEqualTo("USER_NOT_FOUND");
+        var response =
+                handler.handleUsernameNotFoundException(
+                        new UsernameNotFoundException("missing")
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("USER_NOT_FOUND");
     }
 
+
     @Test
+    @DisplayName("should map authorization denied exception")
     void shouldMapAuthorizationDeniedException() {
-        var response = handler.handleAuthorizationDeniedException(new AuthorizationDeniedException("denied"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(response.getBody().getCode()).isEqualTo("ACCESS_DENIED");
+        var response =
+                handler.handleAuthorizationDeniedException(
+                        new AuthorizationDeniedException("denied")
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("ACCESS_DENIED");
     }
 
+
     @Test
+    @DisplayName("should map entity not found exception")
     void shouldMapEntityNotFoundException() {
-        var response = handler.handleEntityNotFoundException(new EntityNotFoundException("missing entity"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(response.getBody().getCode()).isEqualTo("RESOURCE_NOT_FOUND");
+        var response =
+                handler.handleEntityNotFoundException(
+                        new EntityNotFoundException("missing entity")
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("RESOURCE_NOT_FOUND");
     }
 
     @Test
+    @DisplayName("should map unexpected exception")
     void shouldMapUnexpectedException() {
-        var response = handler.handleUnexpectedException(new RuntimeException("boom"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody().getCode()).isEqualTo("ERR_INTERNAL_SERVER_ERROR");
+        var response =
+                handler.handleUnexpectedException(
+                        new RuntimeException("boom")
+                );
+
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("ERR_INTERNAL_SERVER_ERROR");
     }
 
+
     @Test
+    @DisplayName("should map validation errors")
     void shouldMapValidationErrors() throws Exception {
-        Method method = DummyController.class.getDeclaredMethod("handle", DummyRequest.class);
-        MethodParameter parameter = new MethodParameter(method, 0);
-        BindingResult bindingResult = new BeanPropertyBindingResult(new DummyRequest(), "dummyRequest");
-        bindingResult.addError(new org.springframework.validation.FieldError(
-                "dummyRequest",
-                "name",
-                "VALIDATION.NAME.BLANK"
-        ));
+
+        Method method =
+                DummyController.class.getDeclaredMethod(
+                        "handle",
+                        DummyRequest.class
+                );
+
+        MethodParameter parameter =
+                new MethodParameter(method, 0);
+
+        BindingResult bindingResult =
+                new BeanPropertyBindingResult(
+                        new DummyRequest(),
+                        "dummyRequest"
+                );
+
+        bindingResult.addError(
+                new org.springframework.validation.FieldError(
+                        "dummyRequest",
+                        "name",
+                        "VALIDATION.NAME.BLANK"
+                )
+        );
 
         MethodArgumentNotValidException exception =
-                new MethodArgumentNotValidException(parameter, bindingResult);
+                new MethodArgumentNotValidException(
+                        parameter,
+                        bindingResult
+                );
 
-        var response = handler.handleValidationException(exception);
+        var response =
+                handler.handleValidationException(exception);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody().getCode()).isEqualTo("VALIDATION_ERROR");
-        assertThat(response.getBody().getValidationErrors()).hasSize(1);
-        assertThat(response.getBody().getValidationErrors().get(0).getField()).isEqualTo("name");
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        assertThat(response.getBody())
+                .isNotNull();
+
+        assertThat(response.getBody().getCode())
+                .isEqualTo("VALIDATION_ERROR");
+
+        assertThat(response.getBody().getValidationErrors())
+                .hasSize(1);
+
+        assertThat(
+                response.getBody()
+                        .getValidationErrors()
+                        .get(0)
+                        .getField()
+        )
+                .isEqualTo("name");
     }
 
     private static class DummyController {
+
         @SuppressWarnings("unused")
-        void handle(@Valid DummyRequest request) {
+        void handle(
+                @Valid DummyRequest request
+        ) {
         }
     }
 
+
     private static class DummyRequest {
+
         @NotBlank
         private String name;
 
@@ -122,7 +311,9 @@ class ApplicationExceptionHandlerTest {
         }
 
         @SuppressWarnings("unused")
-        public void setName(String name) {
+        public void setName(
+                String name
+        ) {
             this.name = name;
         }
     }

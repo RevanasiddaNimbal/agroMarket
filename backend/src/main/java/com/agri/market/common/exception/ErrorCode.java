@@ -14,18 +14,6 @@ public enum ErrorCode {
             NOT_FOUND
     ),
 
-    USER_ALREADY_DEACTIVATED(
-            "USER_ALREADY_DEACTIVATED",
-            "User account is already deactivated.",
-            CONFLICT
-    ),
-
-    USER_ALREADY_ACTIVATED(
-            "USER_ALREADY_ACTIVATED",
-            "User account is already activated.",
-            CONFLICT
-    ),
-
     EMAIL_ALREADY_EXISTS(
             "EMAIL_ALREADY_EXISTS",
             "The provided email address cannot be used.",
@@ -42,6 +30,37 @@ public enum ErrorCode {
             "The user is not registered.Please register.",
             NOT_FOUND
     ),
+
+    //ADMIN
+
+    ADMIN_USER_NOT_FOUND(
+            "ADMIN_USER_NOT_FOUND",
+            "Admin user not found.",
+            NOT_FOUND
+    ),
+    ADMIN_USER_ALREADY_ACTIVE(
+            "ADMIN_USER_ALREADY_ACTIVE",
+            "Admin user is already active.",
+            CONFLICT
+    ),
+    ADMIN_USER_ALREADY_INACTIVE(
+            "ADMIN_USER_ALREADY_INACTIVE",
+            "Admin user is already inactive.",
+            CONFLICT
+    ),
+
+    ADMIN_USER_ALREADY_LOCKED(
+            "ADMIN_USER_ALREADY_LOCKED",
+            "Admin user is already locked.",
+            CONFLICT
+    ),
+
+    ADMIN_USER_ALREADY_UNLOCKED(
+            "ADMIN_USER_ALREADY_UNLOCKED",
+            "Admin user is already unlocked.",
+            CONFLICT
+    ),
+
     // PASSWORD
 
     INVALID_CURRENT_PASSWORD(
@@ -114,7 +133,13 @@ public enum ErrorCode {
 
     ERR_USER_DISABLED(
             "ERR_USER_DISABLED",
-            "The account is not available for authentication.",
+            "Your account is no longer available. Please contact support.",
+            UNAUTHORIZED
+    ),
+    
+    PERMANENT_ACCOUNT_LOCKED(
+            "PERMANENT_ACCOUNT_LOCKED",
+            "Your account is permanently locked. Please contact support.",
             UNAUTHORIZED
     ),
 

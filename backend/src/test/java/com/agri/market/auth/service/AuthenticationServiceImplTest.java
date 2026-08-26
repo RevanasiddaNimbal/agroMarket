@@ -97,6 +97,10 @@ class AuthenticationServiceImplTest {
     @InjectMocks
     private AuthenticationServiceImpl authenticationService;
 
+    // ============================================================
+    // REGISTER
+    // ============================================================
+
     @Nested
     @DisplayName("register")
     class RegisterTests {
@@ -148,13 +152,49 @@ class AuthenticationServiceImplTest {
 
             User user = userCaptor.getValue();
 
-            assertEquals(FULL_NAME, user.getFullName());
-            assertEquals(EMAIL, user.getEmail());
-            assertEquals(ENCODED_PASSWORD, user.getPassword());
-            assertEquals(List.of(userRole), user.getRoles());
+            assertEquals(
+                    FULL_NAME,
+                    user.getFullName()
+            );
+
+            assertEquals(
+                    EMAIL,
+                    user.getEmail()
+            );
+
+            assertEquals(
+                    ENCODED_PASSWORD,
+                    user.getPassword()
+            );
+
+            assertEquals(
+                    List.of(userRole),
+                    user.getRoles()
+            );
 
             assertFalse(user.isEmailVerified());
             assertFalse(user.isEnabled());
+
+            assertEquals(
+                    0,
+                    user.getFailedLoginAttempts()
+            );
+
+            assertFalse(
+                    user.isAccountLocked()
+            );
+
+            assertNull(
+                    user.getTemporaryLockedUntil()
+            );
+
+            assertFalse(
+                    user.isCredentialsExpired()
+            );
+
+            assertNotNull(
+                    user.getPasswordChangedAt()
+            );
 
             verify(passwordEncoder)
                     .encode(PASSWORD);
@@ -429,6 +469,10 @@ class AuthenticationServiceImplTest {
         }
     }
 
+    // ============================================================
+    // LOGIN
+    // ============================================================
+
     @Nested
     @DisplayName("login")
     class LoginTests {
@@ -470,7 +514,10 @@ class AuthenticationServiceImplTest {
                             clientInfo
                     );
 
-            assertEquals(expectedResponse, response);
+            assertEquals(
+                    expectedResponse,
+                    response
+            );
 
             ArgumentCaptor<UsernamePasswordAuthenticationToken> captor =
                     ArgumentCaptor.forClass(
@@ -483,11 +530,21 @@ class AuthenticationServiceImplTest {
             UsernamePasswordAuthenticationToken token =
                     captor.getValue();
 
-            assertEquals(EMAIL, token.getPrincipal());
-            assertEquals(PASSWORD, token.getCredentials());
+            assertEquals(
+                    EMAIL,
+                    token.getPrincipal()
+            );
+
+            assertEquals(
+                    PASSWORD,
+                    token.getCredentials()
+            );
 
             verify(userRepository)
                     .findByEmailIgnoreCase(EMAIL);
+
+            verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
 
             verify(loginAttemptService)
                     .validateLockStatus(savedUser);
@@ -557,6 +614,9 @@ class AuthenticationServiceImplTest {
                     .findByEmailIgnoreCase(EMAIL);
 
             verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
+
+            verify(loginAttemptService)
                     .validateLockStatus(savedUser);
 
             verify(loginAttemptService)
@@ -583,8 +643,8 @@ class AuthenticationServiceImplTest {
                     .thenReturn(ENCODED_PASSWORD);
 
             when(authenticationManager.authenticate(any(
-                    UsernamePasswordAuthenticationToken.class
-            ))).thenThrow(
+                    UsernamePasswordAuthenticationToken.class)
+            )).thenThrow(
                     new BadCredentialsException("Bad credentials")
             );
 
@@ -601,6 +661,9 @@ class AuthenticationServiceImplTest {
                     BAD_CREDENTIALS,
                     exception.getErrorCode()
             );
+
+            verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
 
             verify(loginAttemptService)
                     .validateLockStatus(savedUser);
@@ -632,8 +695,8 @@ class AuthenticationServiceImplTest {
                     .thenReturn(ENCODED_PASSWORD);
 
             when(authenticationManager.authenticate(any(
-                    UsernamePasswordAuthenticationToken.class
-            ))).thenThrow(
+                    UsernamePasswordAuthenticationToken.class)
+            )).thenThrow(
                     new BadCredentialsException("Bad credentials")
             );
 
@@ -650,6 +713,9 @@ class AuthenticationServiceImplTest {
                     BAD_CREDENTIALS,
                     exception.getErrorCode()
             );
+
+            verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
 
             verify(loginAttemptService)
                     .validateLockStatus(savedUser);
@@ -689,8 +755,8 @@ class AuthenticationServiceImplTest {
                     mock(AuthenticationException.class);
 
             when(authenticationManager.authenticate(any(
-                    UsernamePasswordAuthenticationToken.class
-            ))).thenThrow(exception);
+                    UsernamePasswordAuthenticationToken.class)
+            )).thenThrow(exception);
 
             AuthenticationException thrownException =
                     assertThrows(
@@ -707,7 +773,16 @@ class AuthenticationServiceImplTest {
             );
 
             verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
+
+            verify(loginAttemptService)
                     .validateLockStatus(savedUser);
+
+            verify(loginAttemptService, never())
+                    .recordFailedLogin(savedUser);
+
+            verify(loginAttemptService, never())
+                    .resetAfterSuccessfulLogin(savedUser);
 
             verify(authenticationTokenService, never())
                     .createAuthenticationSession(
@@ -742,6 +817,9 @@ class AuthenticationServiceImplTest {
 
             verify(userRepository)
                     .findByEmailIgnoreCase(EMAIL);
+
+            verify(loginAttemptService, never())
+                    .validateAccountAvailability(any(User.class));
 
             verify(loginAttemptService, never())
                     .validateLockStatus(any(User.class));
@@ -786,12 +864,24 @@ class AuthenticationServiceImplTest {
             );
 
             verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
+
+            verify(loginAttemptService)
                     .validateLockStatus(savedUser);
+
+            verify(authenticationRequest, never())
+                    .getPassword();
 
             verify(authenticationManager, never())
                     .authenticate(any(
                             UsernamePasswordAuthenticationToken.class
                     ));
+
+            verify(loginAttemptService, never())
+                    .resetAfterSuccessfulLogin(any(User.class));
+
+            verify(passwordExpirationService, never())
+                    .validatePasswordPolicy(any(User.class));
 
             verify(authenticationTokenService, never())
                     .createAuthenticationSession(
@@ -828,12 +918,24 @@ class AuthenticationServiceImplTest {
             );
 
             verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
+
+            verify(loginAttemptService)
                     .validateLockStatus(savedUser);
+
+            verify(authenticationRequest, never())
+                    .getPassword();
 
             verify(authenticationManager, never())
                     .authenticate(any(
                             UsernamePasswordAuthenticationToken.class
                     ));
+
+            verify(loginAttemptService, never())
+                    .resetAfterSuccessfulLogin(any(User.class));
+
+            verify(passwordExpirationService, never())
+                    .validatePasswordPolicy(any(User.class));
 
             verify(authenticationTokenService, never())
                     .createAuthenticationSession(
@@ -852,8 +954,9 @@ class AuthenticationServiceImplTest {
             when(userRepository.findByEmailIgnoreCase(EMAIL))
                     .thenReturn(Optional.of(savedUser));
 
-            when(savedUser.isAccountLocked())
-                    .thenReturn(true);
+            doThrow(new BusinessException(ACCOUNT_LOCKED))
+                    .when(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
 
             BusinessException exception =
                     assertThrows(
@@ -869,6 +972,9 @@ class AuthenticationServiceImplTest {
                     exception.getErrorCode()
             );
 
+            verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
+
             verify(loginAttemptService, never())
                     .validateLockStatus(any(User.class));
 
@@ -876,6 +982,55 @@ class AuthenticationServiceImplTest {
                     .authenticate(any(
                             UsernamePasswordAuthenticationToken.class
                     ));
+
+            verify(authenticationTokenService, never())
+                    .createAuthenticationSession(
+                            any(User.class),
+                            any(ClientInfo.class)
+                    );
+        }
+
+        @Test
+        @DisplayName("should reject temporarily locked account")
+        void shouldRejectTemporarilyLockedAccount() {
+
+            when(authenticationRequest.getEmail())
+                    .thenReturn(EMAIL);
+
+            when(userRepository.findByEmailIgnoreCase(EMAIL))
+                    .thenReturn(Optional.of(savedUser));
+
+            doThrow(new BusinessException(ACCOUNT_LOCKED))
+                    .when(loginAttemptService)
+                    .validateLockStatus(savedUser);
+
+            BusinessException exception =
+                    assertThrows(
+                            BusinessException.class,
+                            () -> authenticationService.login(
+                                    authenticationRequest,
+                                    clientInfo
+                            )
+                    );
+
+            assertEquals(
+                    ACCOUNT_LOCKED,
+                    exception.getErrorCode()
+            );
+
+            verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
+
+            verify(loginAttemptService)
+                    .validateLockStatus(savedUser);
+
+            verify(authenticationManager, never())
+                    .authenticate(any(
+                            UsernamePasswordAuthenticationToken.class
+                    ));
+
+            verify(loginAttemptService, never())
+                    .resetAfterSuccessfulLogin(any(User.class));
 
             verify(authenticationTokenService, never())
                     .createAuthenticationSession(
@@ -901,8 +1056,8 @@ class AuthenticationServiceImplTest {
                     .thenReturn(ENCODED_PASSWORD);
 
             when(authenticationManager.authenticate(any(
-                    UsernamePasswordAuthenticationToken.class
-            ))).thenThrow(
+                    UsernamePasswordAuthenticationToken.class)
+            )).thenThrow(
                     new LockedException("Account locked")
             );
 
@@ -916,9 +1071,12 @@ class AuthenticationServiceImplTest {
                     );
 
             assertEquals(
-                    ACCOUNT_LOCKED,
+                    PERMANENT_ACCOUNT_LOCKED,
                     exception.getErrorCode()
             );
+
+            verify(loginAttemptService)
+                    .validateAccountAvailability(savedUser);
 
             verify(loginAttemptService)
                     .validateLockStatus(savedUser);
@@ -928,8 +1086,18 @@ class AuthenticationServiceImplTest {
                             any(User.class),
                             any(ClientInfo.class)
                     );
+
+            verify(loginAttemptService, never())
+                    .resetAfterSuccessfulLogin(savedUser);
+
+            verify(passwordExpirationService, never())
+                    .validatePasswordPolicy(savedUser);
         }
     }
+
+    // ============================================================
+    // REFRESH TOKEN
+    // ============================================================
 
     @Nested
     @DisplayName("refreshToken")
@@ -987,6 +1155,10 @@ class AuthenticationServiceImplTest {
         }
     }
 
+    // ============================================================
+    // LOGOUT
+    // ============================================================
+
     @Nested
     @DisplayName("logout")
     class LogoutTests {
@@ -1023,6 +1195,10 @@ class AuthenticationServiceImplTest {
                     .revokeSession(REFRESH_TOKEN);
         }
     }
+
+    // ============================================================
+    // LOGOUT ALL
+    // ============================================================
 
     @Nested
     @DisplayName("logoutAll")

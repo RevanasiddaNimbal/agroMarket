@@ -44,13 +44,6 @@ public interface UserService extends UserDetailsService {
             String userEmail
     );
 
-    void deactivateAccount(
-            String userEmail
-    );
-
-    void reactivateAccount(
-            String userEmail
-    );
 
     void deleteAccount(
             String userEmail

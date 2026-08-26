@@ -1,5 +1,6 @@
 package com.agri.market.security.jwt;
 
+import com.agri.market.user.entity.User;
 import com.agri.market.user.service.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,15 +19,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter
+        extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private static final String ACCESS_TOKEN_COOKIE = "access_token";
+    private static final String ACCESS_TOKEN_COOKIE =
+            "access_token";
 
     private final JwtService jwtService;
     private final UserService userDetailsService;
@@ -38,16 +42,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull final FilterChain filterChain
     ) throws ServletException, IOException {
 
-        final String jwt = resolveToken(request);
+        final String jwt =
+                resolveToken(request);
 
         if (jwt == null || jwt.isBlank()) {
-            filterChain.doFilter(request, response);
+
+            filterChain.doFilter(
+                    request,
+                    response
+            );
+
             return;
         }
 
         try {
-            authenticateUser(jwt, request);
+
+            authenticateUser(
+                    jwt,
+                    request
+            );
+
         } catch (Exception exception) {
+
+            SecurityContextHolder.clearContext();
 
             log.debug(
                     "JWT authentication failed for {} {}",
@@ -56,7 +73,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             );
         }
 
-        filterChain.doFilter(request, response);
+        filterChain.doFilter(
+                request,
+                response
+        );
     }
 
     private String resolveToken(
@@ -64,30 +84,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) {
 
         final String authorizationHeader =
-                request.getHeader(HttpHeaders.AUTHORIZATION);
+                request.getHeader(
+                        HttpHeaders.AUTHORIZATION
+                );
 
         if (authorizationHeader != null
-                && authorizationHeader.startsWith(BEARER_PREFIX)) {
+                && authorizationHeader.startsWith(
+                BEARER_PREFIX
+        )) {
 
             final String jwt =
-                    authorizationHeader.substring(BEARER_PREFIX.length());
+                    authorizationHeader.substring(
+                            BEARER_PREFIX.length()
+                    );
 
             if (!jwt.isBlank()) {
                 return jwt;
             }
 
-            log.debug("Empty Bearer token received");
+            log.debug(
+                    "Empty Bearer token received"
+            );
+
             return null;
         }
 
-        return extractAccessTokenFromCookie(request);
+        return extractAccessTokenFromCookie(
+                request
+        );
     }
 
     private String extractAccessTokenFromCookie(
             final HttpServletRequest request
     ) {
 
-        final Cookie[] cookies = request.getCookies();
+        final Cookie[] cookies =
+                request.getCookies();
 
         if (cookies == null) {
             return null;
@@ -95,7 +127,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         for (final Cookie cookie : cookies) {
 
-            if (ACCESS_TOKEN_COOKIE.equals(cookie.getName())) {
+            if (ACCESS_TOKEN_COOKIE.equals(
+                    cookie.getName()
+            )) {
+
                 return cookie.getValue();
             }
         }
@@ -112,22 +147,80 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 jwtService.extractUsername(jwt);
 
         if (username == null) {
-            log.debug("JWT did not contain a valid subject");
+
+            log.debug(
+                    "JWT did not contain a valid subject"
+            );
+
             return;
         }
 
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+        if (SecurityContextHolder
+                .getContext()
+                .getAuthentication() != null) {
+
             return;
         }
 
         final UserDetails userDetails =
-                userDetailsService.loadUserByUsername(username);
+                userDetailsService
+                        .loadUserByUsername(username);
+
+        if (!(userDetails instanceof User user)) {
+
+            log.debug(
+                    "JWT authentication rejected because authenticated principal is not a User"
+            );
+
+            return;
+        }
+
+        if (!user.isEnabled()) {
+
+            log.warn(
+                    "JWT authentication rejected because user is disabled. User: {}",
+                    user.getId()
+            );
+
+            return;
+        }
+
+        if (user.isAccountLocked()) {
+
+            log.warn(
+                    "JWT authentication rejected because user is permanently locked. User: {}",
+                    user.getId()
+            );
+
+            return;
+        }
+
+        final LocalDateTime lockedUntil =
+                user.getTemporaryLockedUntil();
+
+        if (lockedUntil != null
+                && lockedUntil.isAfter(
+                LocalDateTime.now()
+        )) {
+
+            log.warn(
+                    "JWT authentication rejected because temporary account lock is active. User: {}, Locked until: {}",
+                    user.getId(),
+                    lockedUntil
+            );
+
+            return;
+        }
 
         if (!jwtService.isTokenValid(
                 jwt,
                 userDetails.getUsername()
         )) {
-            log.debug("JWT validation failed for authenticated user");
+
+            log.debug(
+                    "JWT validation failed for authenticated user"
+            );
+
             return;
         }
 
@@ -143,7 +236,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         .buildDetails(request)
         );
 
-        SecurityContextHolder.getContext()
+        SecurityContextHolder
+                .getContext()
                 .setAuthentication(authentication);
 
         log.debug(

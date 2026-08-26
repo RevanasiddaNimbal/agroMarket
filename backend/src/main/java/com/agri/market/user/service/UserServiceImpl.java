@@ -341,68 +341,6 @@ public class UserServiceImpl implements UserService {
         );
     }
 
-    @Override
-    @Transactional
-    public void deactivateAccount(
-            final String userEmail
-    ) {
-
-        final User user =
-                findUserByEmail(userEmail);
-
-        if (!user.isEnabled()) {
-
-            log.warn(
-                    "Account deactivation rejected; account already deactivated for user: {}",
-                    userEmail
-            );
-
-            throw new BusinessException(
-                    USER_ALREADY_DEACTIVATED
-            );
-        }
-
-        user.setEnabled(false);
-
-        userRepository.save(user);
-
-        log.info(
-                "User account deactivated successfully: {}",
-                userEmail
-        );
-    }
-
-    @Override
-    @Transactional
-    public void reactivateAccount(
-            final String userEmail
-    ) {
-
-        final User user =
-                findUserByEmail(userEmail);
-
-        if (user.isEnabled()) {
-
-            log.warn(
-                    "Account reactivation rejected; account already active for user: {}",
-                    userEmail
-            );
-
-            throw new BusinessException(
-                    USER_ALREADY_ACTIVATED,
-                    user.getEmail()
-            );
-        }
-
-        user.setEnabled(true);
-
-        userRepository.save(user);
-
-        log.info(
-                "User account reactivated successfully: {}",
-                userEmail
-        );
-    }
 
     @Override
     @Transactional

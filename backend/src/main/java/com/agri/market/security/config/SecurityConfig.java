@@ -3,6 +3,8 @@ package com.agri.market.security.config;
 import com.agri.market.auth.properties.AuthenticationCookieProperties;
 import com.agri.market.auth.properties.LoginAttemptProperties;
 import com.agri.market.password.properties.PasswordSecurityProperties;
+import com.agri.market.security.handler.RestAccessDeniedHandler;
+import com.agri.market.security.handler.RestAuthenticationEntryPoint;
 import com.agri.market.security.jwt.JwtAuthenticationFilter;
 import com.agri.market.security.oauth2.handler.OAuth2SuccessHandler;
 import com.agri.market.security.properties.CorsProperties;
@@ -54,10 +56,12 @@ public class SecurityConfig {
     };
 
     private static final String[] USER_ENDPOINTS = {
-            "/api/v1/user/**"
+            "/api/v1/users/**"
     };
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -86,6 +90,18 @@ public class SecurityConfig {
 
                         .anyRequest()
                         .authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .defaultAuthenticationEntryPointFor(
+                                restAuthenticationEntryPoint,
+                                request -> request.getRequestURI()
+                                        .startsWith("/api/")
+                        )
+                        .defaultAccessDeniedHandlerFor(
+                                restAccessDeniedHandler,
+                                request -> request.getRequestURI()
+                                        .startsWith("/api/")
+                        )
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)

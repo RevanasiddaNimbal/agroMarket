@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
-import static com.agri.market.common.exception.ErrorCode.ACCOUNT_LOCKED;
+import static com.agri.market.common.exception.ErrorCode.*;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +23,36 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
     private final LoginAttemptProperties loginAttemptProperties;
 
     @Override
+    @Transactional(readOnly = true)
+    public void validateAccountAvailability(final User user) {
+
+        if (user == null) {
+            return;
+        }
+
+        if (!user.isEnabled()) {
+
+            log.warn(
+                    "Account access rejected because user is disabled. User: {}",
+                    user.getId()
+            );
+
+            throw new BusinessException(ERR_USER_DISABLED);
+        }
+
+        if (user.isAccountLocked()) {
+
+            log.warn(
+                    "Account access rejected because user is permanently locked. User: {}",
+                    user.getId()
+            );
+
+            throw new BusinessException(PERMANENT_ACCOUNT_LOCKED);
+        }
+    }
+
+
+    @Override
     @Transactional
     public void validateLockStatus(final User user) {
 
@@ -31,21 +61,25 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
         }
 
         final LocalDateTime now = LocalDateTime.now();
-        final LocalDateTime lockedUntil = user.getTemporaryLockedUntil();
+
+        final LocalDateTime lockedUntil =
+                user.getTemporaryLockedUntil();
 
         if (lockedUntil == null) {
             return;
         }
 
         if (lockedUntil.isAfter(now)) {
+
             log.warn(
                     "Login blocked due to active temporary lock. User: {}, Locked until: {}",
-                    user.getEmail(),
+                    user.getId(),
                     lockedUntil
             );
 
             throw new BusinessException(ACCOUNT_LOCKED);
         }
+
 
         user.setFailedLoginAttempts(0);
         user.setTemporaryLockedUntil(null);
@@ -54,15 +88,13 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
 
         log.info(
                 "Temporary login lock expired. Login attempts reset for user: {}",
-                user.getEmail()
+                user.getId()
         );
     }
 
+
     @Override
-    @Transactional(
-            propagation = Propagation.REQUIRES_NEW,
-            noRollbackFor = BusinessException.class
-    )
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordFailedLogin(final User user) {
 
         if (user == null) {
@@ -70,21 +102,25 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
         }
 
         final LocalDateTime now = LocalDateTime.now();
+
+        final int currentFailedAttempts =
+                user.getFailedLoginAttempts();
+
+        final int maxAttempts =
+                loginAttemptProperties.getMaxAttempts();
+
         final int nextFailedAttempts =
-                user.getFailedLoginAttempts() + 1;
+                Math.min(currentFailedAttempts + 1, maxAttempts);
 
         user.setFailedLoginAttempts(nextFailedAttempts);
 
-        if (nextFailedAttempts >= loginAttemptProperties.getMaxAttempts()) {
+        if (nextFailedAttempts >= maxAttempts) {
 
             final LocalDateTime lockedUntil =
                     now.plusMinutes(
-                            loginAttemptProperties.getLockDurationMinutes()
+                            loginAttemptProperties
+                                    .getLockDurationMinutes()
                     );
-
-            user.setFailedLoginAttempts(
-                    loginAttemptProperties.getMaxAttempts()
-            );
 
             user.setTemporaryLockedUntil(lockedUntil);
 
@@ -92,9 +128,9 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
 
             log.warn(
                     "Temporary account lock triggered. User: {}, Attempts: {}/{}, Locked until: {}",
-                    user.getEmail(),
-                    user.getFailedLoginAttempts(),
-                    loginAttemptProperties.getMaxAttempts(),
+                    user.getId(),
+                    nextFailedAttempts,
+                    maxAttempts,
                     lockedUntil
             );
 
@@ -106,15 +142,13 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
         log.warn(
                 "Invalid login credentials. Failed attempts: {}/{} for user: {}",
                 nextFailedAttempts,
-                loginAttemptProperties.getMaxAttempts(),
-                user.getEmail()
+                maxAttempts,
+                user.getId()
         );
     }
 
     @Override
-    @Transactional(
-            propagation = Propagation.REQUIRES_NEW
-    )
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void resetAfterSuccessfulLogin(final User user) {
 
         if (user == null) {
@@ -128,7 +162,7 @@ public class LoginAttemptServiceImpl implements LoginAttemptService {
 
         log.info(
                 "Login attempt state reset after successful login for user: {}",
-                user.getEmail()
+                user.getId()
         );
     }
 }

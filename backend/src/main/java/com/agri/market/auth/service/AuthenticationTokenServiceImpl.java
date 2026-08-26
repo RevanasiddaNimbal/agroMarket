@@ -3,6 +3,7 @@ package com.agri.market.auth.service;
 import com.agri.market.auth.dto.AuthenticationResult;
 import com.agri.market.auth.dto.RefreshTokenRequest;
 import com.agri.market.auth.entity.RefreshTokenSession;
+import com.agri.market.common.exception.BusinessException;
 import com.agri.market.security.client.ClientInfo;
 import com.agri.market.security.jwt.JwtService;
 import com.agri.market.user.entity.User;
@@ -10,6 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static com.agri.market.common.exception.ErrorCode.ERR_USER_DISABLED;
+import static com.agri.market.common.exception.ErrorCode.PERMANENT_ACCOUNT_LOCKED;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,8 @@ public class AuthenticationTokenServiceImpl
             final User user,
             final ClientInfo clientInfo
     ) {
+
+        validateUserCanAuthenticate(user);
 
         log.debug(
                 "Creating authentication session for user: {}",
@@ -79,6 +85,8 @@ public class AuthenticationTokenServiceImpl
         final User user =
                 currentSession.getUser();
 
+        validateUserCanAuthenticate(user);
+
         final GeneratedTokens tokens =
                 generateTokens(user);
 
@@ -99,6 +107,45 @@ public class AuthenticationTokenServiceImpl
                 tokens.refreshToken(),
                 user
         );
+    }
+
+    private void validateUserCanAuthenticate(
+            final User user
+    ) {
+
+        if (user == null) {
+            log.warn(
+                    "Authentication session rejected because user is null"
+            );
+
+            throw new BusinessException(
+                    PERMANENT_ACCOUNT_LOCKED
+            );
+        }
+
+        if (!user.isEnabled()) {
+
+            log.warn(
+                    "Authentication session rejected because user is disabled. User: {}",
+                    user.getId()
+            );
+
+            throw new BusinessException(
+                    ERR_USER_DISABLED
+            );
+        }
+
+        if (user.isAccountLocked()) {
+
+            log.warn(
+                    "Authentication session rejected because user is permanently locked. User: {}",
+                    user.getId()
+            );
+
+            throw new BusinessException(
+                    PERMANENT_ACCOUNT_LOCKED
+            );
+        }
     }
 
     private GeneratedTokens generateTokens(
@@ -130,11 +177,15 @@ public class AuthenticationTokenServiceImpl
             final String refreshToken,
             final User user
     ) {
+
         return AuthenticationResult.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType(TOKEN_TYPE)
-                .hasPassword(user.getPassword() != null)
+                .hasPassword(
+                        user.getPassword() != null
+                                && !user.getPassword().isBlank()
+                )
                 .build();
     }
 
