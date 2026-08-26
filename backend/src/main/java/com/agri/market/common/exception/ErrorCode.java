@@ -230,6 +230,67 @@ public enum ErrorCode {
             "ADDRESS_COORDINATES_NOT_ALLOWED",
             "Latitude and longitude are not allowed for a manually entered address.",
             BAD_REQUEST
+    ),
+    // SMS / PHONE VERIFICATION
+
+    PHONE_VERIFICATION_REQUIRED(
+            "PHONE_VERIFICATION_REQUIRED",
+            "Phone number verification is required to perform this operation.",
+            UNAUTHORIZED
+    ),
+
+    PHONE_NOT_VERIFIED(
+            "PHONE_NOT_VERIFIED",
+            "The phone number has not been verified.",
+            BAD_REQUEST
+    ),
+
+    PHONE_NUMBER_REQUIRED(
+            "PHONE_NUMBER_REQUIRED",
+            "A phone number is required for this operation.",
+            BAD_REQUEST
+    ),
+
+    INVALID_PHONE_NUMBER(
+            "INVALID_PHONE_NUMBER",
+            "The provided phone number is invalid.",
+            BAD_REQUEST
+    ),
+
+    INVALID_PHONE_OTP(
+            "INVALID_PHONE_OTP",
+            "The provided OTP is invalid.",
+            BAD_REQUEST
+    ),
+
+    PHONE_OTP_EXPIRED(
+            "PHONE_OTP_EXPIRED",
+            "The phone verification OTP has expired. Please request a new OTP.",
+            BAD_REQUEST
+    ),
+
+    PHONE_OTP_ALREADY_VERIFIED(
+            "PHONE_OTP_ALREADY_VERIFIED",
+            "The phone number is already verified.",
+            CONFLICT
+    ),
+
+    PHONE_OTP_NOT_REQUESTED(
+            "PHONE_OTP_NOT_REQUESTED",
+            "No OTP verification request was found for this phone number.",
+            BAD_REQUEST
+    ),
+
+    PHONE_OTP_RESEND_NOT_ALLOWED(
+            "PHONE_OTP_RESEND_NOT_ALLOWED",
+            "A new OTP cannot be requested yet. Please wait before trying again.",
+            TOO_MANY_REQUESTS
+    ),
+
+    SMS_PROVIDER_ERROR(
+            "SMS_PROVIDER_ERROR",
+            "The SMS service is temporarily unavailable. Please try again later.",
+            SERVICE_UNAVAILABLE
     );
     private final String code;
     private final String defaultMessage;

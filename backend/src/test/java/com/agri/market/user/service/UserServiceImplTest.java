@@ -1,22 +1,17 @@
 package com.agri.market.user.service;
 
 import com.agri.market.common.exception.BusinessException;
+import com.agri.market.sms.service.SmsService;
 import com.agri.market.support.ChangePasswordRequestTestFactory;
-import com.agri.market.support.ProfileUpdateRequestTestFactory;
 import com.agri.market.support.UserTestFactory;
-import com.agri.market.user.dto.ChangePasswordRequestDto;
-import com.agri.market.user.dto.ProfileUpdateRequestDto;
-import com.agri.market.user.dto.SetPasswordRequestDto;
-import com.agri.market.user.dto.UserProfileResponseDto;
+import com.agri.market.user.dto.*;
 import com.agri.market.user.entity.User;
 import com.agri.market.user.mapper.UserMapper;
 import com.agri.market.user.repository.UserRepository;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,6 +37,9 @@ class UserServiceImplTest {
     private static final String NEW_PASSWORD = "New@Password123";
     private static final String ENCODED_PASSWORD = "encoded-password";
     private static final String ENCODED_NEW_PASSWORD = "encoded-new-password";
+    private static final String PHONE_NUMBER = "9876543210";
+    private static final String NEW_PHONE_NUMBER = "8765432109";
+    private static final String OTP = "123456";
 
     @Mock
     private UserRepository userRepository;
@@ -52,15 +50,29 @@ class UserServiceImplTest {
     @Mock
     private UserMapper userMapper;
 
+    @Mock
+    private SmsService smsService;
+
     @InjectMocks
     private UserServiceImpl userService;
+
+    private SetPasswordRequestDto validSetPasswordRequest() {
+
+        SetPasswordRequestDto request =
+                new SetPasswordRequestDto();
+
+        request.setNewPassword(NEW_PASSWORD);
+        request.setConfirmNewPassword(NEW_PASSWORD);
+
+        return request;
+    }
 
     @Nested
     @DisplayName("loadUserByUsername")
     class LoadUserByUsernameTests {
 
         @Test
-        void shouldReturnUserDetailsWhenUserExists() {
+        void shouldReturnUserWhenUserExists() {
 
             User user = UserTestFactory.activeUser();
 
@@ -95,71 +107,157 @@ class UserServiceImplTest {
     }
 
     @Nested
-    @DisplayName("updateProfileInfo")
-    class UpdateProfileInfoTests {
+    @DisplayName("getCurrentUserProfile")
+    class GetCurrentUserProfileTests {
 
         @Test
-        void shouldUpdateAndSaveProfile() {
+        void shouldReturnCurrentUserProfile() {
 
             User user = UserTestFactory.activeUser();
 
-            ProfileUpdateRequestDto request =
-                    ProfileUpdateRequestTestFactory.validRequest();
+            UserProfileResponseDto response =
+                    UserProfileResponseDto.builder()
+                            .id(user.getId())
+                            .fullName(user.getFullName())
+                            .email(user.getEmail())
+                            .phoneNumber(user.getPhoneNumber())
+                            .emailVerified(user.isEmailVerified())
+                            .phoneVerified(user.isPhoneVerified())
+                            .profilePictureUrl(user.getProfilePictureUrl())
+                            .build();
 
             when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
                     .thenReturn(Optional.of(user));
 
-            doAnswer(invocation -> {
+            when(userMapper.toUserProfileResponseDto(user))
+                    .thenReturn(response);
 
-                User target = invocation.getArgument(1);
+            UserProfileResponseDto result =
+                    userService.getCurrentUserProfile(USER_EMAIL);
 
-                target.setFullName("Updated Name");
-                target.setProfilePictureUrl(
-                        "https://example.com/profile.jpg"
-                );
+            assertThat(result)
+                    .isSameAs(response);
 
-                return null;
+            verify(userRepository)
+                    .findByEmailIgnoreCase(USER_EMAIL);
 
-            }).when(userMapper)
-                    .updateUserFromProfileRequest(request, user);
+            verify(userMapper)
+                    .toUserProfileResponseDto(user);
 
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
 
-            userService.updateProfileInfo(
+        @Test
+        void shouldThrowWhenUserDoesNotExist() {
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> userService.getCurrentUserProfile(USER_EMAIL)
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(USER_NOT_FOUND)
+                    );
+
+            verifyNoInteractions(userMapper);
+        }
+    }
+
+    @Nested
+    @DisplayName("updateFullName")
+    class UpdateFullNameTests {
+
+        @Test
+        void shouldUpdateFullNameSuccessfully() {
+
+            User user = UserTestFactory.activeUser();
+
+            UpdateFullNameRequestDto request =
+                    new UpdateFullNameRequestDto();
+
+            request.setFullName("  Updated Name  ");
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            userService.updateFullName(
                     request,
                     USER_EMAIL
             );
 
-            ArgumentCaptor<User> captor =
-                    ArgumentCaptor.forClass(User.class);
-
-            verify(userMapper)
-                    .updateUserFromProfileRequest(
-                            request,
-                            user
-                    );
-
-            verify(userRepository)
-                    .save(captor.capture());
-
-            assertThat(captor.getValue().getFullName())
+            assertThat(user.getFullName())
                     .isEqualTo("Updated Name");
 
-            assertThat(captor.getValue().getProfilePictureUrl())
-                    .isEqualTo(
-                            "https://example.com/profile.jpg"
-                    );
+            verify(userRepository)
+                    .save(user);
         }
 
         @Test
-        void shouldPropagateRepositoryFailureDuringProfileUpdate() {
+        void shouldNotSaveWhenFullNameIsUnchanged() {
 
             User user = UserTestFactory.activeUser();
 
-            ProfileUpdateRequestDto request =
-                    ProfileUpdateRequestTestFactory.validRequest();
+            UpdateFullNameRequestDto request =
+                    new UpdateFullNameRequestDto();
+
+            request.setFullName(
+                    "  " + user.getFullName() + "  "
+            );
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            userService.updateFullName(
+                    request,
+                    USER_EMAIL
+            );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldThrowWhenUserDoesNotExist() {
+
+            UpdateFullNameRequestDto request =
+                    new UpdateFullNameRequestDto();
+
+            request.setFullName("Updated Name");
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> userService.updateFullName(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(USER_NOT_FOUND)
+                    );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldPropagateRepositoryFailure() {
+
+            User user = UserTestFactory.activeUser();
+
+            UpdateFullNameRequestDto request =
+                    new UpdateFullNameRequestDto();
+
+            request.setFullName("Updated Name");
 
             when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
                     .thenReturn(Optional.of(user));
@@ -169,29 +267,91 @@ class UserServiceImplTest {
                     .save(user);
 
             assertThatThrownBy(
-                    () -> userService.updateProfileInfo(
+                    () -> userService.updateFullName(
                             request,
                             USER_EMAIL
                     )
             )
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("db down");
+        }
+    }
+
+    @Nested
+    @DisplayName("updateProfilePicture")
+    class UpdateProfilePictureTests {
+
+        @Test
+        void shouldUpdateProfilePictureSuccessfully() {
+
+            final User user =
+                    UserTestFactory.activeUser();
+
+            final UpdateProfilePictureRequestDto request =
+                    new UpdateProfilePictureRequestDto();
+
+            request.setProfilePictureUrl(
+                    "  https://example.com/profile.jpg  "
+            );
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            userService.updateProfilePicture(
+                    request,
+                    USER_EMAIL
+            );
+
+            assertThat(user.getProfilePictureUrl())
+                    .isEqualTo(
+                            "https://example.com/profile.jpg"
+                    );
 
             verify(userRepository)
-                    .save(user);
+                    .findByEmailIgnoreCase(USER_EMAIL);
+
+            verifyNoMoreInteractions(userRepository);
+        }
+
+        @Test
+        void shouldNotSaveWhenProfilePictureIsUnchanged() {
+
+            User user = UserTestFactory.activeUser();
+
+            UpdateProfilePictureRequestDto request =
+                    new UpdateProfilePictureRequestDto();
+
+            request.setProfilePictureUrl(
+                    "  " + user.getProfilePictureUrl() + "  "
+            );
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            userService.updateProfilePicture(
+                    request,
+                    USER_EMAIL
+            );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
         }
 
         @Test
         void shouldThrowWhenUserDoesNotExist() {
 
-            ProfileUpdateRequestDto request =
-                    ProfileUpdateRequestTestFactory.validRequest();
+            UpdateProfilePictureRequestDto request =
+                    new UpdateProfilePictureRequestDto();
+
+            request.setProfilePictureUrl(
+                    "https://example.com/profile.jpg"
+            );
 
             when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
                     .thenReturn(Optional.empty());
 
             assertThatThrownBy(
-                    () -> userService.updateProfileInfo(
+                    () -> userService.updateProfilePicture(
                             request,
                             USER_EMAIL
                     )
@@ -199,15 +359,798 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(USER_NOT_FOUND)
                     );
 
-            verifyNoInteractions(userMapper);
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("sendPhoneOtp")
+    class SendPhoneOtpTests {
+
+        @Test
+        void shouldSendOtpWhenAddingFirstPhoneNumber() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(null);
+            user.setPhoneVerified(false);
+
+            SendPhoneOtpRequestDto request =
+                    new SendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(
+                    "  " + PHONE_NUMBER + "  "
+            );
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            userService.sendPhoneOtp(
+                    request,
+                    USER_EMAIL
+            );
+
+            verify(smsService)
+                    .sendOtp(PHONE_NUMBER);
 
             verify(userRepository, never())
                     .save(any(User.class));
+
+            assertThat(user.getPhoneNumber())
+                    .isNull();
+
+            assertThat(user.isPhoneVerified())
+                    .isFalse();
+        }
+
+        @Test
+        void shouldSendOtpWhenChangingExistingPhoneNumber() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(PHONE_NUMBER);
+            user.setPhoneVerified(true);
+
+            SendPhoneOtpRequestDto request =
+                    new SendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(NEW_PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(NEW_PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            userService.sendPhoneOtp(
+                    request,
+                    USER_EMAIL
+            );
+
+            verify(smsService)
+                    .sendOtp(NEW_PHONE_NUMBER);
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+
+            assertThat(user.getPhoneNumber())
+                    .isEqualTo(PHONE_NUMBER);
+
+            assertThat(user.isPhoneVerified())
+                    .isTrue();
+        }
+
+        @Test
+        void shouldRejectSameVerifiedPhoneNumber() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(PHONE_NUMBER);
+            user.setPhoneVerified(true);
+
+            SendPhoneOtpRequestDto request =
+                    new SendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            assertThatThrownBy(
+                    () -> userService.sendPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(PHONE_OTP_ALREADY_VERIFIED)
+                    );
+
+            verifyNoInteractions(smsService);
+
+            verify(userRepository, never())
+                    .findByPhoneNumber(anyString());
+        }
+
+        @Test
+        void shouldRejectPhoneNumberBelongingToAnotherUser() {
+
+            User user = UserTestFactory.activeUser();
+            User anotherUser = UserTestFactory.activeUser();
+
+            anotherUser.setId("another-user-id");
+
+            SendPhoneOtpRequestDto request =
+                    new SendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.of(anotherUser));
+
+            assertThatThrownBy(
+                    () -> userService.sendPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(PHONE_ALREADY_EXISTS)
+                    );
+
+            verifyNoInteractions(smsService);
+        }
+
+        @Test
+        void shouldAllowPhoneNumberBelongingToSameUser() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(PHONE_NUMBER);
+            user.setPhoneVerified(false);
+
+            SendPhoneOtpRequestDto request =
+                    new SendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.of(user));
+
+            userService.sendPhoneOtp(
+                    request,
+                    USER_EMAIL
+            );
+
+            verify(smsService)
+                    .sendOtp(PHONE_NUMBER);
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldPropagateSmsProviderFailure() {
+
+            User user = UserTestFactory.activeUser();
+
+            SendPhoneOtpRequestDto request =
+                    new SendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            doThrow(new BusinessException(SMS_PROVIDER_ERROR))
+                    .when(smsService)
+                    .sendOtp(PHONE_NUMBER);
+
+            assertThatThrownBy(
+                    () -> userService.sendPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(SMS_PROVIDER_ERROR)
+                    );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldThrowWhenUserDoesNotExist() {
+
+            SendPhoneOtpRequestDto request =
+                    new SendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> userService.sendPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(USER_NOT_FOUND)
+                    );
+
+            verifyNoInteractions(smsService);
+
+            verify(userRepository, never())
+                    .findByPhoneNumber(anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("verifyPhoneOtp")
+    class VerifyPhoneOtpTests {
+
+        @Test
+        void shouldVerifyAndSaveFirstPhoneNumber() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(null);
+            user.setPhoneVerified(false);
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(
+                    "  " + PHONE_NUMBER + "  "
+            );
+            request.setOtp(
+                    "  " + OTP + "  "
+            );
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            userService.verifyPhoneOtp(
+                    request,
+                    USER_EMAIL
+            );
+
+            verify(smsService)
+                    .verifyOtp(PHONE_NUMBER, OTP);
+
+            verify(userRepository)
+                    .save(user);
+
+            assertThat(user.getPhoneNumber())
+                    .isEqualTo(PHONE_NUMBER);
+
+            assertThat(user.isPhoneVerified())
+                    .isTrue();
+        }
+
+        @Test
+        void shouldReplaceExistingPhoneAfterSuccessfulVerification() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(PHONE_NUMBER);
+            user.setPhoneVerified(true);
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(NEW_PHONE_NUMBER);
+            request.setOtp(OTP);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(NEW_PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            userService.verifyPhoneOtp(
+                    request,
+                    USER_EMAIL
+            );
+
+            verify(smsService)
+                    .verifyOtp(
+                            NEW_PHONE_NUMBER,
+                            OTP
+                    );
+
+            verify(userRepository)
+                    .save(user);
+
+            assertThat(user.getPhoneNumber())
+                    .isEqualTo(NEW_PHONE_NUMBER);
+
+            assertThat(user.isPhoneVerified())
+                    .isTrue();
+        }
+
+        @Test
+        void shouldRejectSameVerifiedPhoneNumber() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(PHONE_NUMBER);
+            user.setPhoneVerified(true);
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+            request.setOtp(OTP);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            assertThatThrownBy(
+                    () -> userService.verifyPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(PHONE_OTP_ALREADY_VERIFIED)
+                    );
+
+            verifyNoInteractions(smsService);
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldRejectPhoneNumberBelongingToAnotherUser() {
+
+            User user = UserTestFactory.activeUser();
+            User anotherUser = UserTestFactory.activeUser();
+
+            anotherUser.setId("another-user-id");
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+            request.setOtp(OTP);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.of(anotherUser));
+
+            assertThatThrownBy(
+                    () -> userService.verifyPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(PHONE_ALREADY_EXISTS)
+                    );
+
+            verifyNoInteractions(smsService);
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldPropagateInvalidOtp() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(null);
+            user.setPhoneVerified(false);
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+            request.setOtp(OTP);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            doThrow(new BusinessException(INVALID_PHONE_OTP))
+                    .when(smsService)
+                    .verifyOtp(
+                            PHONE_NUMBER,
+                            OTP
+                    );
+
+            assertThatThrownBy(
+                    () -> userService.verifyPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(INVALID_PHONE_OTP)
+                    );
+
+            assertThat(user.getPhoneNumber())
+                    .isNull();
+
+            assertThat(user.isPhoneVerified())
+                    .isFalse();
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldPropagateExpiredOtp() {
+
+            User user = UserTestFactory.activeUser();
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+            request.setOtp(OTP);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            doThrow(new BusinessException(PHONE_OTP_EXPIRED))
+                    .when(smsService)
+                    .verifyOtp(
+                            PHONE_NUMBER,
+                            OTP
+                    );
+
+            assertThatThrownBy(
+                    () -> userService.verifyPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(PHONE_OTP_EXPIRED)
+                    );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldPropagateOtpNotRequested() {
+
+            User user = UserTestFactory.activeUser();
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+            request.setOtp(OTP);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            doThrow(new BusinessException(PHONE_OTP_NOT_REQUESTED))
+                    .when(smsService)
+                    .verifyOtp(
+                            PHONE_NUMBER,
+                            OTP
+                    );
+
+            assertThatThrownBy(
+                    () -> userService.verifyPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(PHONE_OTP_NOT_REQUESTED)
+                    );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldPropagateSmsProviderFailure() {
+
+            User user = UserTestFactory.activeUser();
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+            request.setOtp(OTP);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            doThrow(new BusinessException(SMS_PROVIDER_ERROR))
+                    .when(smsService)
+                    .verifyOtp(
+                            PHONE_NUMBER,
+                            OTP
+                    );
+
+            assertThatThrownBy(
+                    () -> userService.verifyPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(SMS_PROVIDER_ERROR)
+                    );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldThrowWhenUserDoesNotExist() {
+
+            VerifyPhoneOtpRequestDto request =
+                    new VerifyPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+            request.setOtp(OTP);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> userService.verifyPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(USER_NOT_FOUND)
+                    );
+
+            verifyNoInteractions(smsService);
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("resendPhoneOtp")
+    class ResendPhoneOtpTests {
+
+        @Test
+        void shouldResendOtpSuccessfully() {
+
+            User user = UserTestFactory.activeUser();
+
+            ResendPhoneOtpRequestDto request =
+                    new ResendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            userService.resendPhoneOtp(
+                    request,
+                    USER_EMAIL
+            );
+
+            verify(smsService)
+                    .resendOtp(PHONE_NUMBER);
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldPropagateResendBlockedException() {
+
+            User user = UserTestFactory.activeUser();
+
+            ResendPhoneOtpRequestDto request =
+                    new ResendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            doThrow(new BusinessException(
+                    PHONE_OTP_RESEND_NOT_ALLOWED
+            ))
+                    .when(smsService)
+                    .resendOtp(PHONE_NUMBER);
+
+            assertThatThrownBy(
+                    () -> userService.resendPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(
+                                    PHONE_OTP_RESEND_NOT_ALLOWED
+                            )
+                    );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldPropagateSmsProviderFailure() {
+
+            User user = UserTestFactory.activeUser();
+
+            ResendPhoneOtpRequestDto request =
+                    new ResendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            when(userRepository.findByPhoneNumber(PHONE_NUMBER))
+                    .thenReturn(Optional.empty());
+
+            doThrow(new BusinessException(SMS_PROVIDER_ERROR))
+                    .when(smsService)
+                    .resendOtp(PHONE_NUMBER);
+
+            assertThatThrownBy(
+                    () -> userService.resendPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(SMS_PROVIDER_ERROR)
+                    );
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
+        void shouldRejectSameVerifiedPhoneNumber() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPhoneNumber(PHONE_NUMBER);
+            user.setPhoneVerified(true);
+
+            ResendPhoneOtpRequestDto request =
+                    new ResendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            assertThatThrownBy(
+                    () -> userService.resendPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(PHONE_OTP_ALREADY_VERIFIED)
+                    );
+
+            verifyNoInteractions(smsService);
+        }
+
+        @Test
+        void shouldThrowWhenUserDoesNotExist() {
+
+            ResendPhoneOtpRequestDto request =
+                    new ResendPhoneOtpRequestDto();
+
+            request.setPhoneNumber(PHONE_NUMBER);
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> userService.resendPhoneOtp(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(USER_NOT_FOUND)
+                    );
+
+            verifyNoInteractions(smsService);
         }
     }
 
@@ -216,12 +1159,12 @@ class UserServiceImplTest {
     class SetPasswordTests {
 
         @Test
-        void shouldSetPasswordSuccessfullyWhenPasswordIsNotConfigured() {
+        void shouldSetPasswordSuccessfully() {
 
             User user = UserTestFactory.activeUser();
 
             user.setPassword(null);
-            user.setFailedLoginAttempts(3);
+            user.setFailedLoginAttempts(4);
             user.setTemporaryLockedUntil(
                     LocalDateTime.now().plusMinutes(10)
             );
@@ -235,10 +1178,6 @@ class UserServiceImplTest {
 
             when(passwordEncoder.encode(NEW_PASSWORD))
                     .thenReturn(ENCODED_NEW_PASSWORD);
-
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
 
             userService.setPassword(
                     request,
@@ -268,7 +1207,7 @@ class UserServiceImplTest {
         }
 
         @Test
-        void shouldSetPasswordSuccessfullyWhenPasswordIsBlank() {
+        void shouldAllowBlankExistingPassword() {
 
             User user = UserTestFactory.activeUser();
 
@@ -283,10 +1222,6 @@ class UserServiceImplTest {
             when(passwordEncoder.encode(NEW_PASSWORD))
                     .thenReturn(ENCODED_NEW_PASSWORD);
 
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
-
             userService.setPassword(
                     request,
                     USER_EMAIL
@@ -294,9 +1229,6 @@ class UserServiceImplTest {
 
             assertThat(user.getPassword())
                     .isEqualTo(ENCODED_NEW_PASSWORD);
-
-            assertThat(user.getPasswordChangedAt())
-                    .isNotNull();
 
             verify(passwordEncoder)
                     .encode(NEW_PASSWORD);
@@ -324,8 +1256,7 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(PASSWORD_MISMATCH)
                     );
 
@@ -336,7 +1267,7 @@ class UserServiceImplTest {
         }
 
         @Test
-        void shouldRejectWhenPasswordIsAlreadySet() {
+        void shouldRejectWhenPasswordAlreadyExists() {
 
             User user = UserTestFactory.activeUser();
 
@@ -357,8 +1288,7 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(PASSWORD_ALREADY_SET)
                     );
 
@@ -370,7 +1300,7 @@ class UserServiceImplTest {
         }
 
         @Test
-        void shouldRejectWhenUserDoesNotExist() {
+        void shouldThrowWhenUserDoesNotExist() {
 
             SetPasswordRequestDto request =
                     validSetPasswordRequest();
@@ -387,8 +1317,7 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(USER_NOT_FOUND)
                     );
 
@@ -396,152 +1325,6 @@ class UserServiceImplTest {
 
             verify(userRepository, never())
                     .save(any(User.class));
-        }
-
-        @Test
-        void shouldResetFailedLoginAttemptsWhenPasswordIsSet() {
-
-            User user = UserTestFactory.activeUser();
-
-            user.setPassword(null);
-            user.setFailedLoginAttempts(4);
-
-            SetPasswordRequestDto request =
-                    validSetPasswordRequest();
-
-            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
-                    .thenReturn(Optional.of(user));
-
-            when(passwordEncoder.encode(NEW_PASSWORD))
-                    .thenReturn(ENCODED_NEW_PASSWORD);
-
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
-
-            userService.setPassword(
-                    request,
-                    USER_EMAIL
-            );
-
-            assertThat(user.getFailedLoginAttempts())
-                    .isZero();
-
-            verify(userRepository)
-                    .save(user);
-        }
-
-        @Test
-        void shouldClearTemporaryLockWhenPasswordIsSet() {
-
-            User user = UserTestFactory.activeUser();
-
-            user.setPassword(null);
-
-            LocalDateTime lockedUntil =
-                    LocalDateTime.now().plusMinutes(10);
-
-            user.setTemporaryLockedUntil(lockedUntil);
-
-            SetPasswordRequestDto request =
-                    validSetPasswordRequest();
-
-            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
-                    .thenReturn(Optional.of(user));
-
-            when(passwordEncoder.encode(NEW_PASSWORD))
-                    .thenReturn(ENCODED_NEW_PASSWORD);
-
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
-
-            userService.setPassword(
-                    request,
-                    USER_EMAIL
-            );
-
-            assertThat(user.getTemporaryLockedUntil())
-                    .isNull();
-
-            verify(userRepository)
-                    .save(user);
-        }
-
-        @Test
-        void shouldMarkCredentialsAsNotExpiredWhenPasswordIsSet() {
-
-            User user = UserTestFactory.activeUser();
-
-            user.setPassword(null);
-            user.setCredentialsExpired(true);
-
-            SetPasswordRequestDto request =
-                    validSetPasswordRequest();
-
-            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
-                    .thenReturn(Optional.of(user));
-
-            when(passwordEncoder.encode(NEW_PASSWORD))
-                    .thenReturn(ENCODED_NEW_PASSWORD);
-
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
-
-            userService.setPassword(
-                    request,
-                    USER_EMAIL
-            );
-
-            assertThat(user.isCredentialsExpired())
-                    .isFalse();
-
-            verify(userRepository)
-                    .save(user);
-        }
-
-        @Test
-        void shouldSetPasswordChangedAtWhenPasswordIsSet() {
-
-            User user = UserTestFactory.activeUser();
-
-            user.setPassword(null);
-
-            SetPasswordRequestDto request =
-                    validSetPasswordRequest();
-
-            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
-                    .thenReturn(Optional.of(user));
-
-            when(passwordEncoder.encode(NEW_PASSWORD))
-                    .thenReturn(ENCODED_NEW_PASSWORD);
-
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
-
-            userService.setPassword(
-                    request,
-                    USER_EMAIL
-            );
-
-            assertThat(user.getPasswordChangedAt())
-                    .isNotNull();
-
-            verify(userRepository)
-                    .save(user);
-        }
-
-        private SetPasswordRequestDto validSetPasswordRequest() {
-
-            SetPasswordRequestDto request =
-                    new SetPasswordRequestDto();
-
-            request.setNewPassword(NEW_PASSWORD);
-            request.setConfirmNewPassword(NEW_PASSWORD);
-
-            return request;
         }
     }
 
@@ -567,8 +1350,7 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(PASSWORD_MISMATCH)
                     );
 
@@ -579,9 +1361,100 @@ class UserServiceImplTest {
         }
 
         @Test
+        void shouldRejectWhenPasswordsDoNotMatch() {
+
+            ChangePasswordRequestDto request =
+                    ChangePasswordRequestTestFactory.validRequest();
+
+            request.setConfirmNewPassword(
+                    "Different@Password123"
+            );
+
+            assertThatThrownBy(
+                    () -> userService.changePassword(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(PASSWORD_MISMATCH)
+                    );
+
+            verifyNoInteractions(
+                    userRepository,
+                    passwordEncoder
+            );
+        }
+
+        @Test
+        void shouldRejectWhenUserDoesNotExist() {
+
+            ChangePasswordRequestDto request =
+                    ChangePasswordRequestTestFactory.validRequest();
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> userService.changePassword(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(USER_NOT_FOUND)
+                    );
+
+            verifyNoInteractions(passwordEncoder);
+        }
+
+        @Test
+        void shouldRejectWhenPasswordIsNotConfigured() {
+
+            User user = UserTestFactory.activeUser();
+
+            user.setPassword(null);
+
+            ChangePasswordRequestDto request =
+                    ChangePasswordRequestTestFactory.validRequest();
+
+            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
+                    .thenReturn(Optional.of(user));
+
+            assertThatThrownBy(
+                    () -> userService.changePassword(
+                            request,
+                            USER_EMAIL
+                    )
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex ->
+                            assertThat(
+                                    ((BusinessException) ex).getErrorCode()
+                            ).isEqualTo(
+                                    PASSWORD_LOGIN_NOT_AVAILABLE
+                            )
+                    );
+
+            verify(passwordEncoder, never())
+                    .matches(anyString(), anyString());
+
+            verify(userRepository, never())
+                    .save(any(User.class));
+        }
+
+        @Test
         void shouldRejectWhenCurrentPasswordIsInvalid() {
 
             User user = UserTestFactory.activeUser();
+
+            user.setPassword(ENCODED_PASSWORD);
 
             ChangePasswordRequestDto request =
                     ChangePasswordRequestTestFactory.validRequest();
@@ -603,49 +1476,25 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(INVALID_CURRENT_PASSWORD)
                     );
 
-            verify(userRepository, never())
-                    .save(any(User.class));
+            verify(passwordEncoder)
+                    .matches(
+                            CURRENT_PASSWORD,
+                            ENCODED_PASSWORD
+                    );
 
             verify(passwordEncoder, never())
                     .encode(anyString());
-        }
-
-        @Test
-        void shouldRejectWhenUserDoesNotExist() {
-
-            ChangePasswordRequestDto request =
-                    ChangePasswordRequestTestFactory.validRequest();
-
-            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
-                    .thenReturn(Optional.empty());
-
-            assertThatThrownBy(
-                    () -> userService.changePassword(
-                            request,
-                            USER_EMAIL
-                    )
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(ex ->
-                            assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
-                            ).isEqualTo(USER_NOT_FOUND)
-                    );
-
-            verifyNoInteractions(passwordEncoder);
 
             verify(userRepository, never())
                     .save(any(User.class));
         }
 
         @Test
-        void shouldEncodeAndSaveNewPassword() {
+        void shouldChangePasswordSuccessfully() {
 
             User user = UserTestFactory.activeUser();
 
@@ -669,10 +1518,6 @@ class UserServiceImplTest {
 
             when(passwordEncoder.encode(NEW_PASSWORD))
                     .thenReturn(ENCODED_NEW_PASSWORD);
-
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
 
             userService.changePassword(
                     request,
@@ -720,10 +1565,6 @@ class UserServiceImplTest {
             when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
                     .thenReturn(Optional.of(user));
 
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
-
             userService.deactivateAccount(USER_EMAIL);
 
             assertThat(user.isEnabled())
@@ -747,8 +1588,7 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(USER_ALREADY_DEACTIVATED)
                     );
 
@@ -768,8 +1608,7 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(USER_NOT_FOUND)
                     );
 
@@ -789,10 +1628,6 @@ class UserServiceImplTest {
 
             when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
                     .thenReturn(Optional.of(user));
-
-            when(userRepository.save(any(User.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0));
 
             userService.reactivateAccount(USER_EMAIL);
 
@@ -817,8 +1652,7 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(USER_ALREADY_ACTIVATED)
                     );
 
@@ -838,8 +1672,7 @@ class UserServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(USER_NOT_FOUND)
                     );
 
@@ -853,57 +1686,17 @@ class UserServiceImplTest {
     class DeleteAccountTests {
 
         @Test
-        void shouldCurrentlyDoNothing() {
+        void shouldDeleteExistingUser() {
 
-            Assertions.assertThatCode(
-                    () -> userService.deleteAccount(USER_EMAIL)
-            ).doesNotThrowAnyException();
-
-            verifyNoInteractions(
-                    userRepository,
-                    passwordEncoder,
-                    userMapper
-            );
-        }
-    }
-
-    @Nested
-    @DisplayName("getCurrentUserProfile")
-    class GetCurrentUserProfileTests {
-
-        @Test
-        void shouldReturnCurrentUserProfile() {
-
-            final User user = UserTestFactory.activeUser();
-
-            final UserProfileResponseDto expectedResponse =
-                    UserProfileResponseDto.builder()
-                            .id(user.getId())
-                            .fullName(user.getFullName())
-                            .email(user.getEmail())
-                            .phoneNumber(user.getPhoneNumber())
-                            .emailVerified(user.isEmailVerified())
-                            .phoneVerified(user.isPhoneVerified())
-                            .profilePictureUrl(user.getProfilePictureUrl())
-                            .build();
+            User user = UserTestFactory.activeUser();
 
             when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
                     .thenReturn(Optional.of(user));
 
-            when(userMapper.toUserProfileResponseDto(user))
-                    .thenReturn(expectedResponse);
-
-            final UserProfileResponseDto result =
-                    userService.getCurrentUserProfile(USER_EMAIL);
-
-            assertThat(result)
-                    .isSameAs(expectedResponse);
+            userService.deleteAccount(USER_EMAIL);
 
             verify(userRepository)
-                    .findByEmailIgnoreCase(USER_EMAIL);
-
-            verify(userMapper)
-                    .toUserProfileResponseDto(user);
+                    .delete(user);
         }
 
         @Test
@@ -913,48 +1706,17 @@ class UserServiceImplTest {
                     .thenReturn(Optional.empty());
 
             assertThatThrownBy(
-                    () -> userService.getCurrentUserProfile(USER_EMAIL)
+                    () -> userService.deleteAccount(USER_EMAIL)
             )
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex ->
                             assertThat(
-                                    ((BusinessException) ex)
-                                            .getErrorCode()
+                                    ((BusinessException) ex).getErrorCode()
                             ).isEqualTo(USER_NOT_FOUND)
                     );
 
-            verify(userRepository)
-                    .findByEmailIgnoreCase(USER_EMAIL);
-
-            verifyNoInteractions(userMapper);
-        }
-
-        @Test
-        void shouldNotSaveUserWhenGettingProfile() {
-
-            final User user = UserTestFactory.activeUser();
-
-            when(userRepository.findByEmailIgnoreCase(USER_EMAIL))
-                    .thenReturn(Optional.of(user));
-
-            final UserProfileResponseDto response =
-                    UserProfileResponseDto.builder()
-                            .id(user.getId())
-                            .fullName(user.getFullName())
-                            .email(user.getEmail())
-                            .phoneNumber(user.getPhoneNumber())
-                            .emailVerified(user.isEmailVerified())
-                            .phoneVerified(user.isPhoneVerified())
-                            .profilePictureUrl(user.getProfilePictureUrl())
-                            .build();
-
-            when(userMapper.toUserProfileResponseDto(user))
-                    .thenReturn(response);
-
-            userService.getCurrentUserProfile(USER_EMAIL);
-
             verify(userRepository, never())
-                    .save(any(User.class));
+                    .delete(any(User.class));
         }
     }
 }

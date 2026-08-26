@@ -27,7 +27,8 @@ import java.util.List;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "users")
 public class User implements UserDetails {
-
+    private static final String DEFAULT_PROFILE_PICTURE_URL =
+            "https://img.magnific.com/premium-psd/avatar-job-profession-3d-illustration-icon_824633-9644.jpg?semt=ais_hybrid&w=740&q=80";
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -79,7 +80,8 @@ public class User implements UserDetails {
             nullable = true,
             columnDefinition = "TEXT"
     )
-    private String profilePictureUrl;
+    @Builder.Default
+    private String profilePictureUrl = DEFAULT_PROFILE_PICTURE_URL;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -127,6 +129,12 @@ public class User implements UserDetails {
                 .toList();
     }
 
+    @PrePersist
+    private void initializeDefaultProfilePicture() {
+        if (profilePictureUrl == null || profilePictureUrl.isBlank()) {
+            profilePictureUrl = DEFAULT_PROFILE_PICTURE_URL;
+        }
+    }
 
     @Override
     public String getUsername() {
