@@ -136,7 +136,7 @@ public enum ErrorCode {
             "Your account is no longer available. Please contact support.",
             UNAUTHORIZED
     ),
-    
+
     PERMANENT_ACCOUNT_LOCKED(
             "PERMANENT_ACCOUNT_LOCKED",
             "Your account is permanently locked. Please contact support.",
@@ -316,7 +316,44 @@ public enum ErrorCode {
             "SMS_PROVIDER_ERROR",
             "The SMS service is temporarily unavailable. Please try again later.",
             SERVICE_UNAVAILABLE
+    ),
+
+    // LOCATION
+
+    STATE_NOT_FOUND(
+            "STATE_NOT_FOUND",
+            "State not found.",
+            NOT_FOUND
+    ),
+    DISTRICT_NOT_FOUND(
+            "DISTRICT_NOT_FOUND",
+            "District not found.",
+            NOT_FOUND
+    ),
+    TALUK_NOT_FOUND(
+            "TALUK_NOT_FOUND",
+            "Taluk not found.",
+            NOT_FOUND
+    ),
+
+    // GEOCODING
+    INVALID_COORDINATES(
+            "INVALID_COORDINATES",
+            "Invalid coordinates provided.",
+            BAD_REQUEST
+    ),
+
+    GEOCODING_FAILED(
+            "GEOCODING_FAILED",
+            "Geocoding request failed.",
+            BAD_REQUEST
+    ),
+    LOCATION_RESOLUTION_FAILED(
+            "LOCATION_RESOLUTION_FAILED",
+            "Failed to resolve location from the provided coordinates.",
+            BAD_REQUEST
     );
+
     private final String code;
     private final String defaultMessage;
     private final HttpStatus status;
