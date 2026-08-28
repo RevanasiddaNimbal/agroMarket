@@ -358,6 +358,17 @@ public enum ErrorCode {
             "CATEGORY_NOT_FOUND",
             "Category not found.",
             NOT_FOUND
+    ),
+    // PRODUCT
+    PRODUCT_NOT_FOUND(
+            "PRODUCT_NOT_FOUND",
+            "Product not found.",
+            NOT_FOUND
+    ),
+    INVALID_PRODUCT_STATUS(
+            "INVALID_PRODUCT_STATUS",
+            "Invalid product status provided.",
+            BAD_REQUEST
     );
 
     private final String code;
