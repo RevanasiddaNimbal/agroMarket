@@ -352,6 +352,12 @@ public enum ErrorCode {
             "LOCATION_RESOLUTION_FAILED",
             "Failed to resolve location from the provided coordinates.",
             BAD_REQUEST
+    ),
+    //CATEGORY
+    CATEGORY_NOT_FOUND(
+            "CATEGORY_NOT_FOUND",
+            "Category not found.",
+            NOT_FOUND
     );
 
     private final String code;
