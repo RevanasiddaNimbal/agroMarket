@@ -369,6 +369,37 @@ public enum ErrorCode {
             "INVALID_PRODUCT_STATUS",
             "Invalid product status provided.",
             BAD_REQUEST
+    ),
+    // PRODUCT  IMAGE
+    INVALID_PRODUCT_IMAGE(
+            "INVALID_PRODUCT_IMAGE",
+            "Invalid product image provided.",
+            BAD_REQUEST
+    ),
+    PRODUCT_IMAGE_UPLOAD_FAILED(
+            "PRODUCT_IMAGE_UPLOAD_FAILED",
+            "Failed to upload product image.",
+            INTERNAL_SERVER_ERROR
+    ),
+    PRODUCT_IMAGE_DELETE_FAILED(
+            "PRODUCT_IMAGE_DELETE_FAILED",
+            "Failed to delete product image.",
+            INTERNAL_SERVER_ERROR
+    ),
+    PRODUCT_IMAGE_NOT_FOUND(
+            "PRODUCT_IMAGE_NOT_FOUND",
+            "Product image not found.",
+            NOT_FOUND
+    ),
+    INVALID_PRODUCT_IMAGE_ORDER(
+            "INVALID_PRODUCT_IMAGE_ORDER",
+            "Invalid product image order provided.",
+            BAD_REQUEST
+    ),
+    PRODUCT_IMAGE_SIZE_EXCEEDED(
+            "PRODUCT_IMAGE_SIZE_EXCEEDED",
+            "Product image size exceeds the maximum allowed limit.",
+            BAD_REQUEST
     );
 
     private final String code;

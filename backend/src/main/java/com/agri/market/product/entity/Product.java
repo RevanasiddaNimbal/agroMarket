@@ -7,6 +7,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import static jakarta.persistence.GenerationType.UUID;
 
@@ -97,6 +99,15 @@ public class Product {
             length = 20
     )
     private String status;
+
+    @OneToMany(
+            mappedBy = "product",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<ProductImage> images = new ArrayList<>();
+
 
     @Column(
             name = "created_at",

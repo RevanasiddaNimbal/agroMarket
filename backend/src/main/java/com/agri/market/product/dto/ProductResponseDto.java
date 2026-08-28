@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -91,6 +92,13 @@ public class ProductResponseDto {
             example = "ACTIVE"
     )
     private String status;
+
+    @JsonProperty("images")
+    @Schema(
+            description = "Images associated with the product"
+    )
+    @Builder.Default
+    private List<ProductImageResponseDto> images = List.of();
 
     @JsonProperty("created_at")
     @Schema(
