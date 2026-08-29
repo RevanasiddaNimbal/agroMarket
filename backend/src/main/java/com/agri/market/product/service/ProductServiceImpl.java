@@ -4,6 +4,8 @@ import com.agri.market.category.entity.Category;
 import com.agri.market.category.repository.CategoryRepository;
 import com.agri.market.common.exception.BusinessException;
 import com.agri.market.common.exception.ErrorCode;
+import com.agri.market.inventory.entity.Inventory;
+import com.agri.market.inventory.repository.InventoryRepository;
 import com.agri.market.product.dto.ProductRequestDto;
 import com.agri.market.product.dto.ProductResponseDto;
 import com.agri.market.product.entity.Product;
@@ -30,6 +32,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final ProductMapper productMapper;
+    private final InventoryRepository inventoryRepository;
 
     @Override
     @Transactional
@@ -61,6 +64,18 @@ public class ProductServiceImpl implements ProductService {
 
         final Product savedProduct =
                 productRepository.save(product);
+
+        final Inventory inventory = Inventory.builder()
+                .product(savedProduct)
+                .reservedQuantity(java.math.BigDecimal.ZERO)
+                .build();
+
+        inventoryRepository.save(inventory);
+
+        log.info(
+                "Inventory created successfully for product: {}",
+                savedProduct.getId()
+        );
 
         log.info(
                 "Product created successfully: {}",

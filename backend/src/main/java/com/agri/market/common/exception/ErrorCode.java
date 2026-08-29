@@ -400,7 +400,34 @@ public enum ErrorCode {
             "PRODUCT_IMAGE_SIZE_EXCEEDED",
             "Product image size exceeds the maximum allowed limit.",
             BAD_REQUEST
+    ),
+    // INVENTORY
+    INVENTORY_NOT_FOUND(
+            "INVENTORY_NOT_FOUND",
+            "Inventory not found for the specified product.",
+            NOT_FOUND
+    ),
+    INSUFFICIENT_STOCK(
+            "INSUFFICIENT_STOCK",
+            "Insufficient stock available for the requested operation.",
+            BAD_REQUEST
+    ),
+    INVENTORY_QUANTITY_LESS_THAN_RESERVED(
+            "INVENTORY_QUANTITY_LESS_THAN_RESERVED",
+            "The new inventory quantity cannot be less than the reserved quantity.",
+            BAD_REQUEST
+    ),
+    INVENTORY_INSUFFICIENT_STOCK(
+            "INVENTORY_INSUFFICIENT_STOCK",
+            "Insufficient stock available for the requested operation.",
+            BAD_REQUEST
+    ),
+    PRODUCT_ACCESS_DENIED(
+            "PRODUCT_ACCESS_DENIED",
+            "You do not have permission to access this product.",
+            FORBIDDEN
     );
+
 
     private final String code;
     private final String defaultMessage;
