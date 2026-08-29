@@ -480,6 +480,27 @@ public enum ErrorCode {
             "WEATHER_005",
             "Weekly weather data must not contain more than seven days",
             HttpStatus.BAD_REQUEST
+    ),
+    // MARKET PRICE
+    MARKET_PRICE_DATE_RANGE_REQUIRED(
+            "MARKET_PRICE_DATE_RANGE_REQUIRED",
+            "Both start date and end date are required for date range queries.",
+            HttpStatus.BAD_REQUEST
+    ),
+    MARKET_PRICE_COMMODITY_REQUIRED(
+            "MARKET_PRICE_COMMODITY_REQUIRED",
+            "Commodity is required for market price queries.",
+            HttpStatus.BAD_REQUEST
+    ),
+    MARKET_PRICE_INVALID_DATE_RANGE(
+            "MARKET_PRICE_INVALID_DATE_RANGE",
+            "The provided date range is invalid. Start date must be before or equal to end date.",
+            HttpStatus.BAD_REQUEST
+    ),
+    MARKET_PRICE_DATE_RANGE_TOO_LARGE(
+            "MARKET_PRICE_DATE_RANGE_TOO_LARGE",
+            "The provided date range is too large. Please limit the range to a maximum of 30 days.",
+            HttpStatus.BAD_REQUEST
     );
 
 
