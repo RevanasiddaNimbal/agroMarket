@@ -426,6 +426,60 @@ public enum ErrorCode {
             "PRODUCT_ACCESS_DENIED",
             "You do not have permission to access this product.",
             FORBIDDEN
+    ),
+
+    // WEATHER
+    WEATHER_PROVIDER_UNAVAILABLE(
+            "WEATHER_PROVIDER_UNAVAILABLE",
+            "Weather service is temporarily unavailable. Please try again later.",
+            SERVICE_UNAVAILABLE
+    ),
+
+    WEATHER_DATA_UNAVAILABLE(
+            "WEATHER_DATA_UNAVAILABLE",
+            "Weather data is currently unavailable for the requested location.",
+            BAD_REQUEST
+    ),
+
+    WEATHER_INVALID_COORDINATES(
+            "WEATHER_INVALID_COORDINATES",
+            "The provided coordinates are invalid.",
+            BAD_REQUEST
+    ),
+
+    WEATHER_RESPONSE_INVALID(
+            "WEATHER_RESPONSE_INVALID",
+            "The weather service returned an invalid response.",
+            BAD_GATEWAY
+    ),
+    WEATHER_DATA_INVALID(
+            "WEATHER_001",
+            "Weather data must not be null",
+            HttpStatus.BAD_REQUEST
+    ),
+
+    WEATHER_DATE_INVALID(
+            "WEATHER_002",
+            "Requested date does not match the weather forecast date",
+            HttpStatus.BAD_REQUEST
+    ),
+
+    WEATHER_WEEKLY_DATA_INVALID(
+            "WEATHER_003",
+            "Weekly weather data must contain valid daily weather information",
+            HttpStatus.BAD_REQUEST
+    ),
+
+    WEATHER_WEEKLY_DATA_EMPTY(
+            "WEATHER_004",
+            "Weekly weather data must not be empty",
+            HttpStatus.BAD_REQUEST
+    ),
+
+    WEATHER_WEEKLY_DATA_LIMIT_EXCEEDED(
+            "WEATHER_005",
+            "Weekly weather data must not contain more than seven days",
+            HttpStatus.BAD_REQUEST
     );
 
 
