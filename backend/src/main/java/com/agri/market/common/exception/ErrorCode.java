@@ -518,10 +518,57 @@ public enum ErrorCode {
             "The request is invalid or malformed.",
             HttpStatus.BAD_REQUEST
     ),
+
     // CHECKOUT
+
     PRODUCT_NOT_AVAILABLE(
             "PRODUCT_NOT_AVAILABLE",
             "The requested product is not available for checkout.",
+            HttpStatus.BAD_REQUEST
+    ),
+
+    // ORDER
+    ORDER_NOT_FOUND(
+            "ORDER_NOT_FOUND",
+            "The requested order was not found.",
+            HttpStatus.NOT_FOUND
+    ),
+    ORDER_INVALID_STATUS_TRANSITION(
+            "ORDER_INVALID_STATUS_TRANSITION",
+            "The requested order status transition is invalid.",
+            HttpStatus.BAD_REQUEST
+    ),
+    ORDER_ACCESS_DENIED(
+            "ORDER_ACCESS_DENIED",
+            "You do not have permission to modify this order.",
+            HttpStatus.FORBIDDEN
+    ),
+    // PAYMENT
+    
+    PAYMENT_NOT_FOUND(
+            "PAYMENT_NOT_FOUND",
+            "The requested payment was not found.",
+            HttpStatus.NOT_FOUND
+    ),
+    PAYMENT_REFUND_FAILED(
+            "PAYMENT_REFUND_FAILED",
+            "The payment refund process failed.",
+            HttpStatus.INTERNAL_SERVER_ERROR
+    ),
+    PAYMENT_ALREADY_EXISTS(
+            "PAYMENT_ALREADY_EXISTS",
+            "A payment already exists for this order.",
+            HttpStatus.CONFLICT
+    ),
+    PAYMENT_FAILED(
+            "PAYMENT_FAILED",
+            "The payment process failed.",
+            HttpStatus.INTERNAL_SERVER_ERROR
+    ),
+
+    PAYMENT_REFUND_NOT_ALLOWED(
+            "PAYMENT_REFUND_NOT_ALLOWED",
+            "Refunds are not allowed for this payment.",
             HttpStatus.BAD_REQUEST
     );
 
