@@ -517,6 +517,12 @@ public enum ErrorCode {
             "INVALID_REQUEST",
             "The request is invalid or malformed.",
             HttpStatus.BAD_REQUEST
+    ),
+    // CHECKOUT
+    PRODUCT_NOT_AVAILABLE(
+            "PRODUCT_NOT_AVAILABLE",
+            "The requested product is not available for checkout.",
+            HttpStatus.BAD_REQUEST
     );
 
 
