@@ -501,6 +501,22 @@ public enum ErrorCode {
             "MARKET_PRICE_DATE_RANGE_TOO_LARGE",
             "The provided date range is too large. Please limit the range to a maximum of 30 days.",
             HttpStatus.BAD_REQUEST
+    ),
+    //CROP INFO
+    EXTERNAL_SERVICE_ERROR(
+            "EXTERNAL_SERVICE_ERROR",
+            "Failed to fetch crop information from external service.",
+            HttpStatus.SERVICE_UNAVAILABLE
+    ),
+    RESOURCE_NOT_FOUND(
+            "RESOURCE_NOT_FOUND",
+            "The requested resource was not found.",
+            HttpStatus.NOT_FOUND
+    ),
+    INVALID_REQUEST(
+            "INVALID_REQUEST",
+            "The request is invalid or malformed.",
+            HttpStatus.BAD_REQUEST
     );
 
 
