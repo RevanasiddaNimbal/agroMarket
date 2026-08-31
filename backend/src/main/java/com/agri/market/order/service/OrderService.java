@@ -2,6 +2,7 @@ package com.agri.market.order.service;
 
 import com.agri.market.order.dto.OrderResponseDto;
 import com.agri.market.order.dto.OrderStatusUpdateRequestDto;
+import com.agri.market.order.dto.OrderTrackingResponseDto;
 import com.agri.market.order.dto.PlaceOrderRequestDto;
 
 import java.util.List;
@@ -16,7 +17,7 @@ public interface OrderService {
     List<OrderResponseDto> getMyOrders(
             String userId
     );
-    
+
 
     OrderResponseDto updateOrderStatus(
             String orderId,
@@ -26,6 +27,11 @@ public interface OrderService {
 
     OrderResponseDto placeOrder(
             PlaceOrderRequestDto request,
+            String userId
+    );
+
+    OrderTrackingResponseDto trackMyOrder(
+            String orderId,
             String userId
     );
 

@@ -2,6 +2,7 @@ package com.agri.market.order.controller;
 
 import com.agri.market.order.dto.OrderResponseDto;
 import com.agri.market.order.dto.OrderStatusUpdateRequestDto;
+import com.agri.market.order.dto.OrderTrackingResponseDto;
 import com.agri.market.order.dto.PlaceOrderRequestDto;
 import com.agri.market.order.service.OrderService;
 import com.agri.market.user.entity.User;
@@ -246,4 +247,45 @@ public class OrderController {
 
         return ResponseEntity.noContent().build();
     }
+
+
+    @Operation(
+            summary = "Track my order",
+            description = "Returns the current status and delivery information of an order belonging to the authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Order tracking information retrieved successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "User is not authenticated"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Order not found"
+            )
+    })
+    @GetMapping("/{orderId}/track")
+    public ResponseEntity<OrderTrackingResponseDto> trackMyOrder(
+            @PathVariable final String orderId,
+            @AuthenticationPrincipal final User user
+    ) {
+
+        log.info(
+                "Order tracking request received. Order: {}, User: {}",
+                orderId,
+                user.getId()
+        );
+
+        final OrderTrackingResponseDto response =
+                orderService.trackMyOrder(
+                        orderId,
+                        user.getId()
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
 }
