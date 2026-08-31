@@ -2,6 +2,7 @@ package com.agri.market.payment.service;
 
 import com.agri.market.common.exception.BusinessException;
 import com.agri.market.common.exception.ErrorCode;
+import com.agri.market.delivery.service.DeliveryService;
 import com.agri.market.order.entity.Order;
 import com.agri.market.order.entity.OrderStatus;
 import com.agri.market.order.repository.OrderRepository;
@@ -35,6 +36,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentMapper paymentMapper;
     private final PaymentProviderFactory paymentProviderFactory;
+    private final DeliveryService deliveryService;
 
     @Override
     @Transactional
@@ -53,6 +55,7 @@ public class PaymentServiceImpl implements PaymentService {
         final Order order =
                 orderRepository.findById(orderId)
                         .orElseThrow(() -> {
+
                             log.warn(
                                     "Order not found for payment: {}",
                                     orderId
@@ -64,6 +67,7 @@ public class PaymentServiceImpl implements PaymentService {
                         });
 
         if (!order.getUser().getId().equals(userId)) {
+
             log.warn(
                     "User {} attempted payment for order {} without ownership",
                     userId,
@@ -76,12 +80,14 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (order.getStatus() == OrderStatus.CANCELLED) {
+
             throw new BusinessException(
                     ErrorCode.ORDER_INVALID_STATUS_TRANSITION
             );
         }
 
         if (paymentRepository.existsByOrderId(orderId)) {
+
             log.warn(
                     "Payment already exists for order: {}",
                     orderId
@@ -101,11 +107,13 @@ public class PaymentServiceImpl implements PaymentService {
                         order.getTotalAmount(),
                         request.getPaymentMethod()
                 );
+
         order.setStatus(
                 providerResponse.isSuccessful()
                         ? OrderStatus.CONFIRMED
                         : OrderStatus.CANCELLED
         );
+
         orderRepository.save(order);
 
         final Payment payment =
@@ -158,6 +166,7 @@ public class PaymentServiceImpl implements PaymentService {
         );
 
         if (!providerResponse.isSuccessful()) {
+
             log.warn(
                     "Payment failed. Order: {}, Payment: {}",
                     orderId,
@@ -169,8 +178,12 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
+        deliveryService.createDelivery(
+                order
+        );
+
         log.info(
-                "Payment completed successfully. Order: {}, Payment: {}",
+                "Payment completed successfully and delivery created. Order: {}, Payment: {}",
                 orderId,
                 savedPayment.getId()
         );
@@ -196,6 +209,7 @@ public class PaymentServiceImpl implements PaymentService {
         final Payment payment =
                 paymentRepository.findByOrderId(orderId)
                         .orElseThrow(() -> {
+
                             log.warn(
                                     "Payment not found for order: {}",
                                     orderId
@@ -210,6 +224,7 @@ public class PaymentServiceImpl implements PaymentService {
                 payment.getOrder();
 
         if (!order.getUser().getId().equals(userId)) {
+
             log.warn(
                     "User {} attempted refund for order {} without ownership",
                     userId,
@@ -222,6 +237,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
+
             log.warn(
                     "Refund rejected. Payment: {}, Status: {}",
                     payment.getId(),
@@ -234,6 +250,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (order.getStatus() != OrderStatus.CANCELLED) {
+
             log.warn(
                     "Refund rejected because order is not cancelled. Order: {}, Status: {}",
                     orderId,
@@ -255,6 +272,7 @@ public class PaymentServiceImpl implements PaymentService {
                 );
 
         if (!providerResponse.isSuccessful()) {
+
             log.warn(
                     "Refund failed. Payment: {}",
                     payment.getId()
@@ -322,6 +340,7 @@ public class PaymentServiceImpl implements PaymentService {
                 paymentRepository.findByOrderId(
                         orderId
                 ).orElseThrow(() -> {
+
                     log.warn(
                             "Payment not found for order: {}",
                             orderId
@@ -332,7 +351,11 @@ public class PaymentServiceImpl implements PaymentService {
                     );
                 });
 
-        if (!payment.getOrder().getUser().getId().equals(userId)) {
+        if (!payment.getOrder()
+                .getUser()
+                .getId()
+                .equals(userId)) {
+
             log.warn(
                     "User {} attempted to access payment for order {} without ownership",
                     userId,

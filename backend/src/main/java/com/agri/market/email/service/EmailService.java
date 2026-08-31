@@ -12,4 +12,9 @@ public interface EmailService {
             String recipient,
             String resetLink
     );
+
+    void sendDeliveryOtpEmail(
+            String recipient,
+            String otp
+    );
 }

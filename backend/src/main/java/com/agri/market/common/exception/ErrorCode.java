@@ -544,7 +544,7 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN
     ),
     // PAYMENT
-    
+
     PAYMENT_NOT_FOUND(
             "PAYMENT_NOT_FOUND",
             "The requested payment was not found.",
@@ -570,6 +570,42 @@ public enum ErrorCode {
             "PAYMENT_REFUND_NOT_ALLOWED",
             "Refunds are not allowed for this payment.",
             HttpStatus.BAD_REQUEST
+    ),
+    // DELIVERY
+    DELIVERY_NOT_AVAILABLE(
+            "DELIVERY_NOT_AVAILABLE",
+            "Delivery is not available for this order.",
+            HttpStatus.BAD_REQUEST
+    ),
+    DELIVERY_OTP_ALREADY_VERIFIED(
+            "DELIVERY_OTP_ALREADY_VERIFIED",
+            "The delivery OTP has already been verified.",
+            HttpStatus.BAD_REQUEST
+    ),
+    DELIVERY_OTP_NOT_FOUND(
+            "DELIVERY_OTP_NOT_FOUND",
+            "No delivery OTP was found for this order.",
+            HttpStatus.BAD_REQUEST
+    ),
+    DELIVERY_OTP_EXPIRED(
+            "DELIVERY_OTP_EXPIRED",
+            "The delivery OTP has expired. Please request a new OTP.",
+            HttpStatus.BAD_REQUEST
+    ),
+    DELIVERY_OTP_INVALID(
+            "DELIVERY_OTP_INVALID",
+            "The provided delivery OTP is invalid.",
+            HttpStatus.BAD_REQUEST
+    ),
+    DELIVERY_NOT_FOUND(
+            "DELIVERY_NOT_FOUND",
+            "The requested delivery was not found.",
+            HttpStatus.NOT_FOUND
+    ),
+    DELIVERY_ALREADY_EXISTS(
+            "DELIVERY_ALREADY_EXISTS",
+            "A delivery already exists for this order.",
+            HttpStatus.CONFLICT
     );
 
 

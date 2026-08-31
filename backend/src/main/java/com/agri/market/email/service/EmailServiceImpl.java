@@ -209,4 +209,65 @@ public class EmailServiceImpl implements EmailService {
                 </html>
                 """.formatted(resetLink);
     }
+
+    @Override
+    public void sendDeliveryOtpEmail(
+            final String recipient,
+            final String otp
+    ) {
+
+        final String htmlContent =
+                buildDeliveryOtpEmail(otp);
+
+        sendEmail(
+                recipient,
+                "AgriMarket delivery verification OTP",
+                htmlContent
+        );
+
+        log.info(
+                "Delivery OTP email sent successfully to recipient"
+        );
+    }
+
+    private String buildDeliveryOtpEmail(
+            final String otp
+    ) {
+
+        return """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>AgriMarket Delivery Verification</title>
+                </head>
+                <body>
+                    <h2>AgriMarket Delivery Verification</h2>
+                
+                    <p>Hello,</p>
+                
+                    <p>
+                        Your delivery verification OTP is:
+                    </p>
+                
+                    <h1>%s</h1>
+                
+                    <p>
+                        This OTP will expire shortly.
+                    </p>
+                
+                    <p>
+                        Do not share this OTP with anyone except the person
+                        completing your delivery.
+                    </p>
+                
+                    <p>
+                        Regards,<br>
+                        AgriMarket Team
+                    </p>
+                </body>
+                </html>
+                """.formatted(otp);
+    }
+
 }
