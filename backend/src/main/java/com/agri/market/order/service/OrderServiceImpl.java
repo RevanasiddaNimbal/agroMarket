@@ -7,6 +7,7 @@ import com.agri.market.common.exception.ErrorCode;
 import com.agri.market.delivery.dto.DeliveryResponseDto;
 import com.agri.market.delivery.mapper.DeliveryMapper;
 import com.agri.market.delivery.repository.DeliveryRepository;
+import com.agri.market.email.service.EmailService;
 import com.agri.market.inventory.entity.Inventory;
 import com.agri.market.inventory.repository.InventoryRepository;
 import com.agri.market.order.dto.OrderResponseDto;
@@ -46,6 +47,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final DeliveryRepository deliveryRepository;
     private final DeliveryMapper deliveryMapper;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -63,31 +65,19 @@ public class OrderServiceImpl implements OrderService {
 
         final User user =
                 userRepository.findById(userId)
-                        .orElseThrow(() -> {
-
-                            log.warn(
-                                    "User not found while placing order: {}",
-                                    userId
-                            );
-
-                            return new BusinessException(
-                                    ErrorCode.USER_NOT_FOUND
-                            );
-                        });
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.USER_NOT_FOUND
+                                )
+                        );
 
         final Product product =
                 productRepository.findById(request.getProductId())
-                        .orElseThrow(() -> {
-
-                            log.warn(
-                                    "Product not found while placing order: {}",
-                                    request.getProductId()
-                            );
-
-                            return new BusinessException(
-                                    ErrorCode.PRODUCT_NOT_FOUND
-                            );
-                        });
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.PRODUCT_NOT_FOUND
+                                )
+                        );
 
         validateProduct(product);
 
@@ -96,34 +86,21 @@ public class OrderServiceImpl implements OrderService {
                                 request.getAddressId(),
                                 userId
                         )
-                        .orElseThrow(() -> {
-
-                            log.warn(
-                                    "Address not found or does not belong to user. Address: {}, User: {}",
-                                    request.getAddressId(),
-                                    userId
-                            );
-
-                            return new BusinessException(
-                                    ErrorCode.ADDRESS_NOT_FOUND
-                            );
-                        });
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.ADDRESS_NOT_FOUND
+                                )
+                        );
 
         final Inventory inventory =
                 inventoryRepository.findByProductIdForUpdate(
                                 product.getId()
                         )
-                        .orElseThrow(() -> {
-
-                            log.warn(
-                                    "Inventory not found while placing order. Product: {}",
-                                    product.getId()
-                            );
-
-                            return new BusinessException(
-                                    ErrorCode.INVENTORY_NOT_FOUND
-                            );
-                        });
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.INVENTORY_NOT_FOUND
+                                )
+                        );
 
         final BigDecimal productQuantity =
                 product.getQuantity() == null
@@ -179,14 +156,22 @@ public class OrderServiceImpl implements OrderService {
 
         order.getItems().add(orderItem);
 
+        inventory.setReservedQuantity(
+                reservedQuantity.add(
+                        request.getQuantity()
+                )
+        );
+
+        inventoryRepository.save(inventory);
+
         final Order savedOrder =
                 orderRepository.save(order);
 
         log.info(
-                "Order placed successfully. Order: {}, User: {}, Total: {}",
+                "Order placed and stock reserved. Order: {}, Product: {}, Reserved: {}",
                 savedOrder.getId(),
-                userId,
-                savedOrder.getTotalAmount()
+                product.getId(),
+                request.getQuantity()
         );
 
         return orderMapper.toResponseDto(
@@ -211,18 +196,11 @@ public class OrderServiceImpl implements OrderService {
                 orderRepository.findByIdAndUserId(
                         orderId,
                         userId
-                ).orElseThrow(() -> {
-
-                    log.warn(
-                            "Order not found or does not belong to user. Order: {}, User: {}",
-                            orderId,
-                            userId
-                    );
-
-                    return new BusinessException(
-                            ErrorCode.ORDER_NOT_FOUND
-                    );
-                });
+                ).orElseThrow(() ->
+                        new BusinessException(
+                                ErrorCode.ORDER_NOT_FOUND
+                        )
+                );
 
         return orderMapper.toResponseDto(order);
     }
@@ -262,17 +240,11 @@ public class OrderServiceImpl implements OrderService {
 
         final Order order =
                 orderRepository.findById(orderId)
-                        .orElseThrow(() -> {
-
-                            log.warn(
-                                    "Order not found: {}",
-                                    orderId
-                            );
-
-                            return new BusinessException(
-                                    ErrorCode.ORDER_NOT_FOUND
-                            );
-                        });
+                        .orElseThrow(() ->
+                                new BusinessException(
+                                        ErrorCode.ORDER_NOT_FOUND
+                                )
+                        );
 
         validateSellerAccess(
                 order,
@@ -291,11 +263,34 @@ public class OrderServiceImpl implements OrderService {
         final Order updatedOrder =
                 orderRepository.save(order);
 
-        log.info(
-                "Order status updated successfully. Order: {}, Status: {}",
-                orderId,
-                request.getStatus()
-        );
+        if (request.getStatus() == OrderStatus.CANCELLED) {
+
+            paymentService.refundPayment(
+                    orderId,
+                    order.getUser().getId()
+            );
+
+            log.info(
+                    "Seller cancelled order and refund completed. Order: {}",
+                    orderId
+            );
+        }
+
+        if (request.getStatus() == OrderStatus.SHIPPED) {
+
+            emailService.sendOrderShippedEmail(
+                    order.getUser().getEmail(),
+                    order.getId()
+            );
+        }
+
+        if (request.getStatus() == OrderStatus.OUT_FOR_DELIVERY) {
+
+            emailService.sendOrderOutForDeliveryEmail(
+                    order.getUser().getEmail(),
+                    order.getId()
+            );
+        }
 
         return orderMapper.toResponseDto(
                 updatedOrder
@@ -319,18 +314,11 @@ public class OrderServiceImpl implements OrderService {
                 orderRepository.findByIdAndUserId(
                         orderId,
                         userId
-                ).orElseThrow(() -> {
-
-                    log.warn(
-                            "Order not found or does not belong to user. Order: {}, User: {}",
-                            orderId,
-                            userId
-                    );
-
-                    return new BusinessException(
-                            ErrorCode.ORDER_NOT_FOUND
-                    );
-                });
+                ).orElseThrow(() ->
+                        new BusinessException(
+                                ErrorCode.ORDER_NOT_FOUND
+                        )
+                );
 
         final DeliveryResponseDto deliveryResponse =
                 deliveryRepository.findByOrderId(
@@ -365,20 +353,16 @@ public class OrderServiceImpl implements OrderService {
                 orderRepository.findByIdAndUserId(
                         orderId,
                         userId
-                ).orElseThrow(() -> {
-
-                    log.warn(
-                            "Order not found or does not belong to user. Order: {}, User: {}",
-                            orderId,
-                            userId
-                    );
-
-                    return new BusinessException(
-                            ErrorCode.ORDER_NOT_FOUND
-                    );
-                });
+                ).orElseThrow(() ->
+                        new BusinessException(
+                                ErrorCode.ORDER_NOT_FOUND
+                        )
+                );
 
         validateCancellation(order);
+
+        final OrderStatus currentStatus =
+                order.getStatus();
 
         order.setStatus(
                 OrderStatus.CANCELLED
@@ -386,10 +370,35 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(order);
 
-        log.info(
-                "Order marked as CANCELLED. Order: {}",
-                orderId
-        );
+        if (currentStatus == OrderStatus.PENDING_PAYMENT) {
+
+            releaseReservedQuantity(order);
+
+            emailService.sendOrderCancellationEmail(
+                    order.getUser().getEmail(),
+                    order.getId(),
+                    order.getTotalAmount().toString()
+            );
+
+            for (final OrderItem orderItem : order.getItems()) {
+
+                emailService.sendProductOrderCancellationEmail(
+                        orderItem.getProduct()
+                                .getFarmer()
+                                .getEmail(),
+                        order.getId(),
+                        orderItem.getProduct().getName(),
+                        orderItem.getQuantity().toString()
+                );
+            }
+
+            log.info(
+                    "Pending payment order cancelled and reservation released. Order: {}",
+                    orderId
+            );
+
+            return;
+        }
 
         paymentService.refundPayment(
                 orderId,
@@ -397,9 +406,55 @@ public class OrderServiceImpl implements OrderService {
         );
 
         log.info(
-                "Order cancellation and payment refund completed successfully. Order: {}",
+                "Order cancellation and payment refund completed. Order: {}",
                 orderId
         );
+    }
+
+    private void releaseReservedQuantity(
+            final Order order
+    ) {
+
+        for (final OrderItem orderItem : order.getItems()) {
+
+            final Product product =
+                    orderItem.getProduct();
+
+            final Inventory inventory =
+                    inventoryRepository.findByProductIdForUpdate(
+                                    product.getId()
+                            )
+                            .orElseThrow(() ->
+                                    new BusinessException(
+                                            ErrorCode.INVENTORY_NOT_FOUND
+                                    )
+                            );
+
+            final BigDecimal reservedQuantity =
+                    inventory.getReservedQuantity() == null
+                            ? BigDecimal.ZERO
+                            : inventory.getReservedQuantity();
+
+            final BigDecimal newReservedQuantity =
+                    reservedQuantity.subtract(
+                            orderItem.getQuantity()
+                    );
+
+            if (newReservedQuantity.compareTo(
+                    BigDecimal.ZERO
+            ) < 0) {
+
+                throw new BusinessException(
+                        ErrorCode.INVENTORY_INSUFFICIENT_STOCK
+                );
+            }
+
+            inventory.setReservedQuantity(
+                    newReservedQuantity
+            );
+
+            inventoryRepository.save(inventory);
+        }
     }
 
     private void validateProduct(
@@ -408,11 +463,6 @@ public class OrderServiceImpl implements OrderService {
 
         if (!ProductStatus.ACTIVE.name().equals(product.getStatus())) {
 
-            log.warn(
-                    "Order rejected because product is not active: {}",
-                    product.getId()
-            );
-
             throw new BusinessException(
                     ErrorCode.PRODUCT_NOT_AVAILABLE
             );
@@ -420,11 +470,6 @@ public class OrderServiceImpl implements OrderService {
 
         if (product.getPrice() == null
                 || product.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-
-            log.warn(
-                    "Order rejected because product price is invalid: {}",
-                    product.getId()
-            );
 
             throw new BusinessException(
                     ErrorCode.PRODUCT_NOT_AVAILABLE
@@ -449,12 +494,6 @@ public class OrderServiceImpl implements OrderService {
 
         if (!belongsToUser) {
 
-            log.warn(
-                    "User {} attempted to modify order {} without seller ownership",
-                    userId,
-                    order.getId()
-            );
-
             throw new BusinessException(
                     ErrorCode.ORDER_ACCESS_DENIED
             );
@@ -468,12 +507,6 @@ public class OrderServiceImpl implements OrderService {
 
         if (currentStatus == OrderStatus.DELIVERED
                 || currentStatus == OrderStatus.CANCELLED) {
-
-            log.warn(
-                    "Invalid order status transition from {} to {}",
-                    currentStatus,
-                    newStatus
-            );
 
             throw new BusinessException(
                     ErrorCode.ORDER_INVALID_STATUS_TRANSITION
@@ -535,12 +568,6 @@ public class OrderServiceImpl implements OrderService {
         if (status != OrderStatus.PENDING_PAYMENT
                 && status != OrderStatus.CONFIRMED
                 && status != OrderStatus.PROCESSING) {
-
-            log.warn(
-                    "Order cancellation rejected. Order: {}, Current status: {}",
-                    order.getId(),
-                    status
-            );
 
             throw new BusinessException(
                     ErrorCode.ORDER_INVALID_STATUS_TRANSITION

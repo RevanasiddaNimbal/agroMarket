@@ -68,7 +68,7 @@ public class EmailVerificationServiceImpl
 
         log.info(
                 "Verification email request processed for user: {}",
-                rawToken
+                user.getId()
         );
     }
 

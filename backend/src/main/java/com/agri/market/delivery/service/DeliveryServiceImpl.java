@@ -163,7 +163,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         log.info(
                 "Delivery OTP generated for order: {}",
-                otp
+                order.getId()
         );
     }
 
@@ -219,6 +219,28 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         deliveryRepository.save(delivery);
         orderRepository.save(order);
+
+        final User buyer =
+                order.getUser();
+
+        final User productOwner =
+                order.getItems()
+                        .get(0)
+                        .getProduct()
+                        .getFarmer();
+
+        emailService.sendDeliveryCompletedEmail(
+                buyer.getEmail(),
+                order.getId()
+        );
+
+        if (!productOwner.getId().equals(buyer.getId())) {
+
+            emailService.sendDeliveryCompletedEmail(
+                    productOwner.getEmail(),
+                    order.getId()
+            );
+        }
 
         log.info(
                 "Delivery completed successfully for order: {}",
