@@ -59,7 +59,7 @@ public class UserController {
 
     @Operation(
             summary = "Update current user's profile picture",
-            description = "Updates only the profile picture of the currently authenticated user."
+            description = "Uploads a new profile picture to Cloudinary and stores the resulting secure URL."
     )
     @ApiResponses({
             @ApiResponse(
@@ -68,17 +68,20 @@ public class UserController {
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Invalid profile picture URL"
+                    description = "Invalid image file"
             ),
             @ApiResponse(
                     responseCode = "401",
                     description = "Authentication required"
             )
     })
-    @PatchMapping("/me/profile-picture")
+    @PatchMapping(
+            value = "/me/profile-picture",
+            consumes = "multipart/form-data"
+    )
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateProfilePicture(
-            @Valid @RequestBody final UpdateProfilePictureRequestDto request,
+            @Valid @ModelAttribute final UpdateProfilePictureRequestDto request,
             final Authentication authentication
     ) {
 

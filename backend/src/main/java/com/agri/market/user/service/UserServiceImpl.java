@@ -1,5 +1,6 @@
 package com.agri.market.user.service;
 
+import com.agri.market.cloudinary.service.CloudinaryService;
 import com.agri.market.common.exception.BusinessException;
 import com.agri.market.sms.service.SmsService;
 import com.agri.market.user.dto.*;
@@ -27,15 +28,17 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final SmsService smsService;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(
             final String userEmail
-    ) throws UsernameNotFoundException {
+    ) {
 
         return userRepository.findByEmailIgnoreCase(userEmail)
                 .orElseThrow(() -> {
+
                     log.debug(
                             "User not found during authentication: {}",
                             userEmail
@@ -53,7 +56,8 @@ public class UserServiceImpl implements UserService {
             final String userEmail
     ) {
 
-        final User user = findUserByEmail(userEmail);
+        final User user =
+                findUserByEmail(userEmail);
 
         return userMapper.toUserProfileResponseDto(user);
     }
@@ -65,7 +69,8 @@ public class UserServiceImpl implements UserService {
             final String userEmail
     ) {
 
-        final User user = findUserByEmail(userEmail);
+        final User user =
+                findUserByEmail(userEmail);
 
         final String newFullName =
                 request.getFullName().trim();
@@ -91,16 +96,17 @@ public class UserServiceImpl implements UserService {
             final String userEmail
     ) {
 
-        final User user = findUserByEmail(userEmail);
+        final User user =
+                findUserByEmail(userEmail);
 
         final String profilePictureUrl =
-                request.getProfilePictureUrl().trim();
+                cloudinaryService.uploadProfilePicture(
+                        request.getProfilePicture()
+                );
 
-        if (profilePictureUrl.equals(user.getProfilePictureUrl())) {
-            return;
-        }
-
-        user.setProfilePictureUrl(profilePictureUrl);
+        user.setProfilePictureUrl(
+                profilePictureUrl
+        );
 
         userRepository.save(user);
 
@@ -117,7 +123,8 @@ public class UserServiceImpl implements UserService {
             final String userEmail
     ) {
 
-        final User user = findUserByEmail(userEmail);
+        final User user =
+                findUserByEmail(userEmail);
 
         final String phoneNumber =
                 request.getPhoneNumber().trim();
@@ -142,7 +149,8 @@ public class UserServiceImpl implements UserService {
             final String userEmail
     ) {
 
-        final User user = findUserByEmail(userEmail);
+        final User user =
+                findUserByEmail(userEmail);
 
         final String phoneNumber =
                 request.getPhoneNumber().trim();
@@ -178,7 +186,8 @@ public class UserServiceImpl implements UserService {
             final String userEmail
     ) {
 
-        final User user = findUserByEmail(userEmail);
+        final User user =
+                findUserByEmail(userEmail);
 
         final String phoneNumber =
                 request.getPhoneNumber().trim();
@@ -217,7 +226,8 @@ public class UserServiceImpl implements UserService {
             );
         }
 
-        final User user = findUserByEmail(userEmail);
+        final User user =
+                findUserByEmail(userEmail);
 
         if (user.getPassword() != null
                 && !user.getPassword().isBlank()) {
@@ -289,7 +299,8 @@ public class UserServiceImpl implements UserService {
             );
         }
 
-        final User user = findUserByEmail(userEmail);
+        final User user =
+                findUserByEmail(userEmail);
 
         if (user.getPassword() == null
                 || user.getPassword().isBlank()) {

@@ -8,6 +8,10 @@ public interface CloudinaryService {
             MultipartFile file
     );
 
+    String uploadProfilePicture(
+            MultipartFile file
+    );
+
     void deleteImage(
             String publicId
     );

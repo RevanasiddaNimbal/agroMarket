@@ -401,6 +401,16 @@ public enum ErrorCode {
             "Product image size exceeds the maximum allowed limit.",
             BAD_REQUEST
     ),
+    PROFILE_PICTURE_UPLOAD_FAILED(
+            "PROFILE_PICTURE_UPLOAD_FAILED",
+            "Failed to upload profile picture.",
+            INTERNAL_SERVER_ERROR
+    ),
+    INVALID_PROFILE_PICTURE(
+            "INVALID_PROFILE_PICTURE",
+            "Invalid profile picture provided.",
+            BAD_REQUEST
+    ),
     // INVENTORY
     INVENTORY_NOT_FOUND(
             "INVENTORY_NOT_FOUND",
