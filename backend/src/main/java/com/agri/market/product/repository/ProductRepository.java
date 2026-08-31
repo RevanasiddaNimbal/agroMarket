@@ -1,7 +1,6 @@
 package com.agri.market.product.repository;
 
 import com.agri.market.product.entity.Product;
-import com.agri.market.product.entity.ProductStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -28,6 +27,6 @@ public interface ProductRepository
 
     long countByFarmer_IdAndStatus(
             String farmerId,
-            ProductStatus status
+            String status
     );
 }
